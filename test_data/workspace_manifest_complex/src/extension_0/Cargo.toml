@@ -10,7 +10,7 @@ name = "_ext_0"
 crate-type = ["cdylib"]
 
 [dependencies]
-reaper-medium.workspace = true
+fragile.workspace = true
 reaper-low.workspace = true
 reaper-macros.workspace = true
-fragile.workspace = true
+reaper-medium.workspace = true
