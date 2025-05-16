@@ -5,6 +5,7 @@ authors = ["Cloud Scythe Labs <cloudscythelabs@gmail.com>"]
 description = "A Cargo plugin for developing REAPER extension plugins with Rust."
 edition = "2024"
 license = "MIT"
+readme = "README.md"
 publish = true
 
 [dependencies]
