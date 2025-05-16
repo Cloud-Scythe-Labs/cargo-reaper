@@ -1,0 +1,15 @@
+[package]
+name = "extension_1"
+version.workspace = true
+description = "Mauris in interdum leo."
+edition.workspace = true
+
+[lib]
+name = "_ext_1"
+crate-type = ["cdylib"]
+
+[dependencies]
+reaper-medium.workspace = true
+reaper-low.workspace = true
+reaper-macros.workspace = true
+fragile.workspace = true

@@ -1,0 +1,14 @@
+[package]
+name = "package_extension"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+reaper-medium = { git = "https://github.com/helgoboss/reaper-rs.git", branch = "master" }
+reaper-low = { git = "https://github.com/helgoboss/reaper-rs.git", branch = "master" }
+reaper-macros = { git = "https://github.com/helgoboss/reaper-rs.git", branch = "master" }
+fragile = "2.0.1"
+
+[lib]
+name = "_package_extension"
+crate-type = ["cdylib"]

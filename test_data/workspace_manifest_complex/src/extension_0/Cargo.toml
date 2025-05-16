@@ -1,0 +1,16 @@
+[package]
+name = "extension_0"
+version.workspace = true
+description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris ac nibh tortor. Mauris vitae porttitor dui."
+edition.workspace = true
+authors = ["author_0 <author_0@example.com>"]
+
+[lib]
+name = "_ext_0"
+crate-type = ["cdylib"]
+
+[dependencies]
+reaper-medium.workspace = true
+reaper-low.workspace = true
+reaper-macros.workspace = true
+fragile.workspace = true
