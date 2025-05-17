@@ -1,8 +1,13 @@
-use std::process;
+use std::{fs, process};
 
 use crate::{
+    config::ReaperPluginConfig,
     error::TomlErrorEmitter,
-    util::{Colorize, ReaperPluginConfig, validate_plugin},
+    util::{
+        Colorize, find_project_root,
+        os::{add_plugin_ext, from_plugin_file_name, rename_plugin, symlink_plugin},
+        validate_plugin,
+    },
 };
 
 /// Build a REAPER extension plugin.
@@ -26,7 +31,7 @@ pub(crate) fn build(no_symlink: bool, args: Vec<String>) -> anyhow::Result<()> {
                 .find(|arg| *arg == "--release")
                 .map_or("debug", |_| "release");
 
-            for (to_plugin_file_name, plugin_manifest_dir) in config.extension_plugins.iter() {
+            for (to_plugin_file_name, plugin_manifest_dir) in config.extension_plugins().iter() {
                 let manifest_file = plugin_manifest_dir.get_ref().join("Cargo.toml");
                 let manifest_file_content = fs::read_to_string(&manifest_file).map_err(|err| {
                     anyhow::anyhow!(

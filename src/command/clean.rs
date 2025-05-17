@@ -1,8 +1,12 @@
 use std::{collections, fs, path, process};
 
 use crate::{
+    config::ReaperPluginConfig,
     error::TomlErrorEmitter,
-    util::{Colorize, ReaperPluginConfig},
+    util::{
+        Colorize, find_project_root,
+        os::{add_plugin_ext, remove_plugin_symlink},
+    },
 };
 
 /// Remove extension plugins from the `UserPlugins` directory.
@@ -16,7 +20,7 @@ pub(crate) fn clean(
     let mut emitter = TomlErrorEmitter::<String, String>::new();
 
     let plugins: collections::HashMap<String, path::PathBuf> = if !plugins.is_empty() {
-        let mut map = config.extension_plugins;
+        let mut map = config.extension_plugins().to_owned();
         map.retain(|k, _| plugins.contains(k.as_ref()));
         if map.is_empty() {
             anyhow::bail!(
@@ -29,7 +33,8 @@ pub(crate) fn clean(
             .collect()
     } else {
         config
-            .extension_plugins
+            .extension_plugins()
+            .to_owned()
             .into_iter()
             .map(|(key, val)| (key.into_inner(), val.into_inner()))
             .collect()

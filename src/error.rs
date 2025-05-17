@@ -36,6 +36,7 @@ where
     /// Given some diagnostic error info, insert the file and string contents into the db, and
     /// add an error built from the messages and spans to the list of errors. The file id is
     /// automatically handled between the diagnostic error and the db.
+    // TODO: Refactor this so it is more legible
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn insert_err(
         &mut self,

@@ -1,7 +1,7 @@
 use std::path;
 
 pub(crate) use clap::Parser;
-use clap::{Subcommand, ValueHint};
+use clap::ValueHint;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -16,7 +16,7 @@ pub struct CargoReaperArgs {
     #[command(subcommand)]
     pub(crate) command: CargoReaperCommand,
 }
-#[derive(Debug, Clone, Subcommand)]
+#[derive(Debug, Clone, clap::Subcommand)]
 pub enum CargoReaperCommand {
     /// Create a new REAPER extension plugin from a template at <PATH>.
     New { path: path::PathBuf },
