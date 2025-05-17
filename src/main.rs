@@ -9,6 +9,10 @@ use codespan_reporting::{
 };
 use colored::Colorize;
 
+pub(crate) mod util;
+pub(crate) mod error;
+pub(crate) mod command;
+
 /// Acceptable plugin config toml names for renaming and symlinking REAPER extenion plugins built with Rust.
 pub const CONFIG_FILE_NAMES: &[&str; 2] = &[".reaper.toml", "reaper.toml"];
 
