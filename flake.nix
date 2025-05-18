@@ -37,8 +37,7 @@
       advisory-db,
       ...
     }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
+    flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
@@ -70,8 +69,17 @@
           inherit cargoArtifacts;
           doCheck = false;
         });
+        buildReaperExtension = craneLib.buildPackage {
+          mkCargoDerivation = craneLib.mkCargoDerivation {
+            nativeBuildInputs = [ cargo-reaper-drv ];
+            buildPhaseCargoCommand = ''
+              cargo reaper build --no-symlink
+            '';
+          };
+        };
       in
       {
+        inherit buildReaperExtension;
         checks = {
           # Build the crate as part of `nix flake check` for convenience
           inherit cargo-reaper-drv;
