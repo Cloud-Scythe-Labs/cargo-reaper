@@ -35,6 +35,16 @@ pub enum CargoReaperCommand {
         args: Vec<String>,
     },
 
+    Link {
+        /// Create symlinks to the `UserPlugins` directory by key.
+        #[arg(long = "plugin", short = 'p', value_name = "PLUGIN_KEY")]
+        plugins: Vec<String>,
+
+        /// Create symlinks to the `UserPlugins` directory by path.
+        #[arg(long = "path", short = 'P', value_name = "PLUGIN_PATH", value_hint = ValueHint::FilePath)]
+        paths: Vec<path::PathBuf>,
+    },
+
     /// Compile and run REAPER extension plugin(s).
     Run {
         /// Override the REAPER executable file path. By default, the REAPER executable found on
