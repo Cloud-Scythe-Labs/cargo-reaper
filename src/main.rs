@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
         CargoReaperCommand::New { path } => new(path).await,
         CargoReaperCommand::List => list(),
         CargoReaperCommand::Build { no_symlink, args } => build(no_symlink, args),
-        CargoReaperCommand::Link { plugins, paths } => link(plugins, paths),
+        CargoReaperCommand::Link { paths } => link(paths),
         CargoReaperCommand::Run { exec, args } => build(false, args).and_then(|_| run(exec)),
         CargoReaperCommand::Clean {
             plugins,
