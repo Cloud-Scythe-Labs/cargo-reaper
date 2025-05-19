@@ -37,8 +37,7 @@
       advisory-db,
       ...
     }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
+    flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
@@ -142,6 +141,9 @@
 
         devShells.default = craneLib.devShell {
           checks = self.checks.${system};
+          packages = [
+            self.packages.${system}.default
+          ];
         };
       }
     );

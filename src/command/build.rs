@@ -13,8 +13,8 @@ use crate::{
 /// Build a REAPER extension plugin.
 pub(crate) fn build(no_symlink: bool, args: Vec<String>) -> anyhow::Result<()> {
     let project_root = find_project_root()?;
-    let mut emitter = TomlErrorEmitter::<String, String>::new();
     let config = ReaperPluginConfig::load(&project_root)?;
+    let mut emitter = TomlErrorEmitter::<String, String>::new();
 
     match process::Command::new("cargo")
         .arg("build")

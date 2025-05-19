@@ -26,13 +26,20 @@ pub enum CargoReaperCommand {
 
     /// Compile REAPER extension plugin(s).
     Build {
-        /// Do not symlink the plugin(s) to the `UserPlugins` directory.
+        /// Do not symlink plugin(s) to the `UserPlugins` directory.
         #[arg(long)]
         no_symlink: bool,
 
         /// Arguments to forward to the `cargo build` invocation.
         #[arg(allow_hyphen_values = true, trailing_var_arg = true, num_args = 0.., value_name = "CARGO_BUILD_ARGS")]
         args: Vec<String>,
+    },
+
+    /// Symlink plugin(s) to the `UserPlugins` directory.
+    Link {
+        /// Create symlink(s) by path.
+        #[arg(value_name = "PLUGIN_PATH", value_hint = ValueHint::FilePath, required = true, num_args = 1..)]
+        paths: Vec<path::PathBuf>,
     },
 
     /// Compile and run REAPER extension plugin(s).
