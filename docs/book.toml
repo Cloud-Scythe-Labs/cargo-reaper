@@ -1,0 +1,5 @@
+[book]
+authors = ["Cloud Scythe Labs <cloudscythelabs@gmail.com>"]
+language = "en"
+src = "src"
+title = "cargo-reaper"
