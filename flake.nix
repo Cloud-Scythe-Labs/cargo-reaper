@@ -142,6 +142,7 @@
         devShells.default = craneLib.devShell {
           checks = self.checks.${system};
           packages = [
+            pkgs.mdbook
             self.packages.${system}.default
           ];
         };

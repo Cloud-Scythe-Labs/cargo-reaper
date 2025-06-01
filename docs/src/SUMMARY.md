@@ -1,0 +1,14 @@
+# Summary
+
+- [Introduction](./introduction.md)
+- [Platform Support](./platform-support.md)
+- [Configuration File](./configuration-file.md)
+- [Plugin Manifest](./plugin-manifest.md)
+- [Commands](./commands.md)
+  - [`cargo-reaper new`](./commands/new.md)
+  - [`cargo-reaper list`](./commands/list.md)
+  - [`cargo-reaper build`](./commands/build.md)
+  - [`cargo-reaper link`](./commands/link.md)
+  - [`cargo-reaper run`](./commands/run.md)
+  - [`cargo-reaper clean`](./commands/clean.md)
+- [Appendix: Glossary](./appendix/glossary.md)
