@@ -1,5 +1,0 @@
-# Define the desired name and path to a directory containing a Cargo.toml for each extension plugin.
-# Extension plugin names must start with `reaper_` or they will not be recognized by REAPER.
-
-[extension_plugins]
-reaper_package_ext = "./."

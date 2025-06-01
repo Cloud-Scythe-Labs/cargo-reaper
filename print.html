@@ -1,0 +1,569 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>cargo-reaper</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">cargo-reaper</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p><code>cargo-reaper</code> is a Cargo plugin designed to streamline the development of REAPER extension plugins with Rust.
+It serves as a companion for the <a href="https://github.com/helgoboss/reaper-rs"><code>reaper-rs</code></a> library,
+which provides Rust bindings and tools for creating REAPER plugins -- including a procedural macro that bootstraps your plugin as a native REAPER extension.</p>
+<h2 id="motivation"><a class="header" href="#motivation">Motivation</a></h2>
+<p>Developing REAPER extension plugins requires intimate knowledge about REAPER and its behavior on each platform that it supports.
+This information is somewhat esoteric and not listed in the development docs, making extension plugin development a trail-and-error ordeal.
+<code>cargo-reaper</code> aims to simplify the learning curve by providing an easy-to-use, intuitive interface for initializing, building,
+testing and publishing REAPER extension plugins.</p>
+<p>Throughout this book are references to REAPER specific terminology, most of which you may safely ignore since <code>cargo-reaper</code>
+handles it for you, however, if you wish to know more the <a href="./appendix/glossary.html"><code>Glossary</code></a> section contains detailed documentation
+that may aid you in understanding how <code>cargo-reaper</code> works. It is recommended to have a once-over for anyone creating a non-trivial
+extension plugin.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="platform-support"><a class="header" href="#platform-support">Platform Support</a></h1>
+<p>Any platform which is both supported by Rust and REAPER should work.</p>
+<blockquote>
+<p><strong>Important</strong>: <a href="https://www.reaper.fm/sdk/plugin/plugin.php"><em><strong>extension plugins built for 32bit Windows must be built with MSVC</strong></em></a>.
+The <a href="https://www.mingw-w64.org/">MinGW-w64</a> target is untested, but MSVC for 64bit Windows is confirmed working.</p>
+</blockquote>
+<p>The following are the canonical sources of truth for REAPER platform support:</p>
+<ul>
+<li><a href="https://www.reaper.fm/download.php">REAPER Download</a></li>
+<li><a href="https://www.reaper.fm/sdk/plugin/plugin.php">REAPER Extensions SDK</a></li>
+</ul>
+<p>Which can then be cross referenced against the Rust target list:</p>
+<ul>
+<li><a href="https://doc.rust-lang.org/rustc/platform-support.html">Rust Platform Support</a></li>
+</ul>
+<p>Or via <code>rustc</code> from the terminal:</p>
+<pre><code class="language-sh">rustc --print target-list
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="configuration-file"><a class="header" href="#configuration-file">Configuration File</a></h1>
+<p><code>cargo-reaper</code> requires a configuration file in the project root that conforms to the following
+naming convention (in precedence order):</p>
+<ul>
+<li><code>reaper.toml</code></li>
+<li><code>.reaper.toml</code></li>
+</ul>
+<blockquote>
+<p>This file is created automatically for projects initialized by <a href="./commands/new.html"><code>cargo-reaper-new</code></a>.</p>
+</blockquote>
+<h2 id="declaring-extension-plugins"><a class="header" href="#declaring-extension-plugins">Declaring Extension Plugins</a></h2>
+<p><code>cargo-reaper</code> expects a key-value pair mapping of reaper extension plugins, where the key is the finalized name of the
+plugin and the value is the path to a directory containing a cargo manifest. All other information <code>cargo-reaper</code> needs
+is gathered from the manifest file.</p>
+<p>A minimal <code>reaper.toml</code>, for a single cargo package could look like the following:</p>
+<pre><code class="language-toml">[extension_plugins]
+reaper_hello_world_extension = "./."
+</code></pre>
+<blockquote>
+<p><em><strong>Important</strong></em>: REAPER requires that extension plugins be prefixed by <code>reaper_</code>, otherwise REAPER will not recognize it.</p>
+<p><code>cargo-reaper</code> will throw an error and refuse to compile if an extension plugin listed does not meet this condition.</p>
+</blockquote>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="plugin-manifest"><a class="header" href="#plugin-manifest">Plugin Manifest</a></h1>
+<p>There are a few necessities for <code>cargo-reaper</code> to recognize an extension plugin that is declared in a <a href="./configuration-file.html">configuration file</a>.</p>
+<ol>
+<li>The cargo manifest must be a <a href="https://doc.rust-lang.org/cargo/appendix/glossary.html#package"><em>package</em></a>.</li>
+<li>The package must include a <a href="https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target"><em>library target</em></a>.</li>
+<li>The library target must include a <a href="https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-name-field"><code>name</code></a> field.</li>
+<li>The library target must include <a href="https://doc.rust-lang.org/reference/linkage.html#r-link.cdylib"><code>cdylib</code></a> in the <a href="https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-crate-type-field"><code>crate-type</code></a> field.</li>
+</ol>
+<p>The above should be true whether the project is a single package, workspace with multiple packages or workspace package.</p>
+<h2 id="package-manifest"><a class="header" href="#package-manifest">Package Manifest</a></h2>
+<p>An example of a single package manifest and its corresponding <a href="./configuration-file.html">configuration file</a>.</p>
+<pre><code class="language-toml"># Cargo.toml
+[package]
+name = "my_package"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "my_extension_plugin"
+crate-type = ["cdylib"]
+</code></pre>
+<pre><code class="language-toml"># reaper.toml
+[extension_plugins]
+reaper_my_plugin = "./."
+</code></pre>
+<h2 id="workspace-manifest"><a class="header" href="#workspace-manifest">Workspace Manifest</a></h2>
+<p>Examples of acceptable workspace patterns and their corresponding <a href="./configuration-file.html">configuration file</a>s.</p>
+<h3 id="workspace-with-multiple-package-manifests"><a class="header" href="#workspace-with-multiple-package-manifests">Workspace with Multiple Package Manifests</a></h3>
+<p>An example of a virtual workspace that does not contain a package attribute, but consists of multiple members,
+each of which being a package manifest with the <a href="plugin-manifest.html#plugin-manifest">plugin manifest criteria</a>.</p>
+<pre><code class="language-toml"># Cargo.toml
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+</code></pre>
+<pre><code class="language-toml"># reaper.toml
+[extension_plugins]
+reaper_my_plugin_1 = "./crates/my_plugin_1"
+reaper_my_plugin_2 = "./crates/my_plugin_2"
+</code></pre>
+<h3 id="workspace-package-manifest"><a class="header" href="#workspace-package-manifest">Workspace Package Manifest</a></h3>
+<p>An example of a workspace package manifest. The library target <a href="https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-path-field"><code>path</code></a> field may be necessary in some cases, depending on the
+workspace layout. For brevity, the default path is specified below.</p>
+<pre><code class="language-toml"># Cargo.toml
+[workspace.package]
+name = "my_workspace_package"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "my_extension_plugin"
+path = "./src/lib.rs"
+crate-type = ["cdylib"]
+</code></pre>
+<pre><code class="language-toml"># reaper.toml
+[extension_plugins]
+reaper_my_plugin = "./."
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cargo-reaper"><a class="header" href="#cargo-reaper">cargo-reaper</a></h1>
+<h2 id="name"><a class="header" href="#name">NAME</a></h2>
+<p>cargo-reaper -- A Cargo plugin for developing REAPER extension plugins with Rust.</p>
+<h2 id="synopsis"><a class="header" href="#synopsis">SYNOPSIS</a></h2>
+<p><code>cargo-reaper</code> <em>command</em></p>
+<h2 id="description"><a class="header" href="#description">DESCRIPTION</a></h2>
+<p><code>cargo-reaper</code> is a convenience wrapper around Cargo that adds a post-build hook to streamline REAPER extension development. It automatically renames the compiled plugin to include the required <code>reaper_</code> prefix and symlinks it to REAPER’s <code>UserPlugins</code> directory.</p>
+<p>By default, Cargo prefixes dynamic libraries with <code>lib</code>, which REAPER does not recognize. Manually renaming the plugin and keeping the <code>UserPlugins</code> directory up-to-date can be tedious -- <code>cargo-reaper</code> takes care of all that for you, across all supported platforms.</p>
+<h2 id="commands"><a class="header" href="#commands">COMMANDS</a></h2>
+<p>Each command is documented in its own section:</p>
+<p><a href="./commands/new.html"><code>cargo-reaper new</code></a> </br></p>
+  <dd>Scaffold a new plugin project.</dd>
+<p><a href="./commands/list.html"><code>cargo-reaper list</code></a> </br></p>
+  <dd>Print plugin information to <code>stdout</code>.</dd>
+<p><a href="./commands/build.html"><code>cargo-reaper build</code></a> </br></p>
+  <dd>Compile REAPER plugin(s).</dd>
+<p><a href="./commands/link.html"><code>cargo-reaper link</code></a> </br></p>
+  <dd>Manually symlink plugin(s) to REAPER's <code>UserPlugins</code> directory.</dd>
+<p><a href="./commands/run.html"><code>cargo-reaper run</code></a> </br></p>
+  <dd>Compile plugin(s) and launch REAPER.</dd>
+<p><a href="./commands/clean.html"><code>cargo-reaper clean</code></a> </br></p>
+  <dd>Remove generated symlinks and artifacts.</dd>
+<p><code>help</code> </br></p>
+  <dd>Print help or the help of the given subcommand(s).</dd>
+<h2 id="options"><a class="header" href="#options">OPTIONS</a></h2>
+<p><code>-h</code> </br>
+<code>--help</code> </br></p>
+  <dd>Print help (see more with <code>--help</code>).</dd>
+<p><code>-V</code> </br>
+<code>--version</code> </br></p>
+  <dd>Print version information.</dd>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cargo-reaper-new"><a class="header" href="#cargo-reaper-new">cargo-reaper-new</a></h1>
+<h2 id="name-1"><a class="header" href="#name-1">NAME</a></h2>
+<p>cargo-reaper-new -- Create a new REAPER extension plugin.</p>
+<h2 id="synopsis-1"><a class="header" href="#synopsis-1">SYNOPSIS</a></h2>
+<p><code>cargo-reaper new</code> <em>path</em></p>
+<h2 id="description-1"><a class="header" href="#description-1">DESCRIPTION</a></h2>
+<p>This command will create a new Cargo package in the given directory that is set up for use with <code>cargo-reaper</code>.
+This includes a simple template with a <code>Cargo.toml</code> manifest, sample source file, <code>reaper.toml</code> configuration file, and a <code>.gitignore</code> file.</p>
+<h2 id="options-1"><a class="header" href="#options-1">OPTIONS</a></h2>
+<p><code>-h</code> </br>
+<code>--help</code> </br></p>
+  <dd>Print help information.</dd>
+<h2 id="examples"><a class="header" href="#examples">EXAMPLES</a></h2>
+<pre><code class="language-sh">cargo reaper new reaper_my_plugin
+</code></pre>
+<blockquote>
+<p><em><strong>Important</strong></em>: REAPER requires that extension plugins be prefixed by <code>reaper_</code>, otherwise REAPER will not recognize it.</p>
+<p>The <code>reaper_</code> prefix is added by default in the <a href="commands/../configuration-file.html"><code>cargo-reaper</code> configuration file</a> that is generated by <code>cargo-reaper-new</code>,
+however, <code>cargo-reaper</code> will throw an error and refuse to compile if an extension plugin listed does not meet this condition.</p>
+</blockquote>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cargo-reaper-list"><a class="header" href="#cargo-reaper-list">cargo-reaper-list</a></h1>
+<h2 id="name-2"><a class="header" href="#name-2">NAME</a></h2>
+<p>cargo-reaper-list -- List all detected REAPER plugin packages in a <code>cargo-reaper</code> project.</p>
+<h2 id="synopsis-2"><a class="header" href="#synopsis-2">SYNOPSIS</a></h2>
+<p><code>cargo-reaper list</code></p>
+<h2 id="description-2"><a class="header" href="#description-2">DESCRIPTION</a></h2>
+<p>This command prints a list of available plugins and their version, description and author information
+in a human-readable format to the terminal via <code>stdout</code>.</p>
+<h2 id="options-2"><a class="header" href="#options-2">OPTIONS</a></h2>
+<p><code>-h</code> </br>
+<code>--help</code> </br></p>
+  <dd>Print help information.</dd>
+<h2 id="examples-1"><a class="header" href="#examples-1">EXAMPLES</a></h2>
+<pre><code class="language-sh">cargo reaper list
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cargo-reaper-build"><a class="header" href="#cargo-reaper-build">cargo-reaper-build</a></h1>
+<h2 id="name-3"><a class="header" href="#name-3">NAME</a></h2>
+<p>cargo-reaper-build -- Compile REAPER extension plugin(s).</p>
+<h2 id="synopsis-3"><a class="header" href="#synopsis-3">SYNOPSIS</a></h2>
+<p><code>cargo-reaper build</code> [<em>options</em>] [<em>cargo_build_args</em>]...</p>
+<h2 id="description-3"><a class="header" href="#description-3">DESCRIPTION</a></h2>
+<p>Compiles, renames and symlinks REAPER extension plugins, forwarding trailing arguments to the <a href="https://doc.rust-lang.org/cargo/commands/cargo-build.html#options"><code>cargo-build</code></a> invocation.</p>
+<p>The resulting <code>target</code> is renamed to its corresponding key specified in the <a href="commands/../configuration-file.html"><code>cargo-reaper</code> configuration file</a>.
+Symlinks to plugins in REAPER's <code>UserPlugins</code> directory are managed automatically, unless specified otherwise. This ensures that a new plugin
+that is built with the <code>release</code> profile, does not fail to be symlinked if a symlink with the same name already exists for the <code>debug</code> profile.</p>
+<p>If for whatever reason symlinking fails, and the build command is unable to remove a stale symlink, use <a href="commands/./clean.html"><code>cargo-reaper-clean</code></a>.</p>
+<h2 id="options-3"><a class="header" href="#options-3">OPTIONS</a></h2>
+<p><code>--no-symlink</code> </br></p>
+  <dd>Prevent symlinking extension plugin(s) to the <code>UserPlugins</code> directory.</dd>
+<p><code>-h</code> </br>
+<code>--help</code> </br></p>
+  <dd>Print help information.</dd>
+<h2 id="examples-2"><a class="header" href="#examples-2">EXAMPLES</a></h2>
+<ol>
+<li>Build a package or workspace containing a REAPER extension plugin, and all of its dependencies.</li>
+</ol>
+<pre><code class="language-sh">cargo reaper build
+</code></pre>
+<ol start="2">
+<li>Build a package or workspace containing a REAPER extension plugin and all of its dependencies, but do not create symlinks to the <code>UserPlugins</code> directory.</li>
+</ol>
+<pre><code class="language-sh">cargo reaper build --no-symlink
+</code></pre>
+<ol start="3">
+<li>Build only the specified package in a workspace containing a REAPER extension plugin with optimizations for x86_64 Windows.</li>
+</ol>
+<pre><code class="language-sh">cargo reaper build -p reaper_my_plugin --lib --release --target x86_64-pc-windows-msvc
+cargo reaper build -- -p reaper_my_plugin --lib --release --target x86_64-pc-windows-msvc
+</code></pre>
+<blockquote>
+<p>Note that arguments passed to the <code>cargo-build</code> invocation must be trailing. These may be passed directly, or as positional arguments.</p>
+</blockquote>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cargo-reaper-link"><a class="header" href="#cargo-reaper-link">cargo-reaper-link</a></h1>
+<h2 id="name-4"><a class="header" href="#name-4">NAME</a></h2>
+<p>cargo-reaper-link -- Manually symlink extension plugin(s) to REAPER's <code>UserPlugins</code> directory.</p>
+<h2 id="synopsis-4"><a class="header" href="#synopsis-4">SYNOPSIS</a></h2>
+<p><code>cargo-reaper link</code> [<em>path</em>]...</p>
+<h2 id="description-4"><a class="header" href="#description-4">DESCRIPTION</a></h2>
+<p>Manually symlink one or more extension plugins to REAPER's <code>UserPlugins</code> directory.</p>
+<p>This may be useful in circumstances where finer grain control is necessary between building
+and symlinking the plugin, for instance, in CI or when using build tools like Nix or Docker.</p>
+<blockquote>
+<p>By default <a href="commands/./build.html"><code>cargo-reaper-build</code></a> will symlink extension plugins automatically, unless specified otherwise.</p>
+</blockquote>
+<h2 id="options-4"><a class="header" href="#options-4">OPTIONS</a></h2>
+<p><code>-h</code> </br>
+<code>--help</code> </br></p>
+  <dd>Print help information.</dd>
+<h2 id="examples-3"><a class="header" href="#examples-3">EXAMPLES</a></h2>
+<ol>
+<li>Create a symlink from an absolute path to a compiled REAPER extension plugin to REAPER's <code>UserPlugins</code> directory.</li>
+</ol>
+<pre><code class="language-sh">cargo reaper link /absolute/path/to/target/release/reaper_my_plugin.{so|dylib|dll}
+</code></pre>
+<ol start="2">
+<li>Create a symlink from a relative path to a compiled REAPER extension plugin to REAPER's <code>UserPlugins</code> directory, using shell scripting (Linux and MacOS only).</li>
+</ol>
+<pre><code class="language-sh">cargo reaper link $(realpath target/release/reaper_my_plugin.*)
+</code></pre>
+<blockquote>
+<p>REAPER extension plugins are dynamically linked libraries, which have differing extension names depending on their target platform.
+Below is a list of platforms and their corresponding extension names, though in most cases, a regex catchall will suffice (<code>reaper_my_plugin.*</code>).</p>
+<ul>
+<li>Linux -- <code>.so</code></li>
+<li>Darwin (MacOS) -- <code>.dylib</code></li>
+<li>Windows -- <code>.dll</code></li>
+</ul>
+</blockquote>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cargo-reaper-run"><a class="header" href="#cargo-reaper-run">cargo-reaper-run</a></h1>
+<h2 id="name-5"><a class="header" href="#name-5">NAME</a></h2>
+<p>cargo-reaper-run -- Run REAPER extension plugin(s).</p>
+<h2 id="synopsis-5"><a class="header" href="#synopsis-5">SYNOPSIS</a></h2>
+<p><code>cargo-reaper run</code> [<em>options</em>] [<em>cargo_build_args</em>]...</p>
+<h2 id="description-5"><a class="header" href="#description-5">DESCRIPTION</a></h2>
+<p>Compile extension plugins and open REAPER.</p>
+<p>This is effectively shorthand for running <a href="commands/./build.html"><code>cargo-reaper-build</code></a> then opening REAPER, which will make
+changes to your extension plugins take immediate effect.</p>
+<p><code>cargo-reaper-run</code> will attempt to use the REAPER binary executable on <code>$PATH</code> if it's available, otherwise falling
+back to the platform specific default global installation path. If for some reason the default installation is not
+working, please see the options below for manually specifying a path to a REAPER binary executable.</p>
+<h2 id="options-5"><a class="header" href="#options-5">OPTIONS</a></h2>
+<p><code>-e</code> <em>path</em> </br>
+<code>--exec</code> <em>path</em> </br></p>
+  <dd>Override the REAPER executable file path.</dd>
+<p><code>-h</code> </br>
+<code>--help</code> </br></p>
+  <dd>Print help information.</dd>
+<h2 id="examples-4"><a class="header" href="#examples-4">EXAMPLES</a></h2>
+<ol>
+<li>Build a package or workspace containing a REAPER extension plugin and all of its dependencies, and open REAPER.</li>
+</ol>
+<pre><code class="language-sh">cargo reaper run
+</code></pre>
+<ol start="2">
+<li>Build only the specified package in a workspace containing a REAPER extension plugin with optimizations for x86_64 Windows, and open REAPER.</li>
+</ol>
+<pre><code class="language-sh">cargo reaper run -p reaper_my_plugin --lib --release --target x86_64-pc-windows-msvc
+cargo reaper run -- -p reaper_my_plugin --lib --release --target x86_64-pc-windows-msvc
+</code></pre>
+<blockquote>
+<p>Note that arguments passed to the <code>cargo-build</code> invocation must be trailing. These may be passed directly, or as positional arguments.</p>
+</blockquote>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cargo-reaper-clean"><a class="header" href="#cargo-reaper-clean">cargo-reaper-clean</a></h1>
+<h2 id="name-6"><a class="header" href="#name-6">NAME</a></h2>
+<p>cargo-reaper-clean -- Remove plugin(s) from the <code>UserPlugins</code> directory that <code>cargo-reaper</code> has generated in the past.</p>
+<h2 id="synopsis-6"><a class="header" href="#synopsis-6">SYNOPSIS</a></h2>
+<p><code>cargo-reaper clean</code> [<em>options</em>]</p>
+<h2 id="description-6"><a class="header" href="#description-6">DESCRIPTION</a></h2>
+<p>Clean plugin symlinks from REAPER's <code>UserPlugins</code> directory, and optionally artifacts generated by <code>cargo-reaper</code>.</p>
+<h2 id="options-6"><a class="header" href="#options-6">OPTIONS</a></h2>
+<p><code>-p</code> <em>key</em> </br>
+<code>--plugin</code> <em>key</em> </br></p>
+  <dd>Clean plugin(s) by key.</dd>
+<p><code>-n</code> </br>
+<code>--dry-run</code> </br></p>
+  <dd>Display what would be deleted without deleting anything.</dd>
+<p><code>-a</code> </br>
+<code>--remove-artifacts</code> </br></p>
+  <dd>Remove artifacts that cargo-reaper has generated in the past.</dd>
+<p><code>-h</code> </br>
+<code>--help</code> </br></p>
+  <dd>Print help information.</dd>
+<h2 id="examples-5"><a class="header" href="#examples-5">EXAMPLES</a></h2>
+<ol>
+<li>Remove all plugin symlinks whose keys exist in the <a href="commands/../configuration-file.html"><code>cargo-reaper</code> configuration file</a>.</li>
+</ol>
+<pre><code class="language-sh">cargo reaper clean
+</code></pre>
+<ol start="2">
+<li>Remove specific plugin symlinks by referencing its key in the <a href="commands/../configuration-file.html"><code>cargo-reaper</code> configuration file</a>.</li>
+</ol>
+<pre><code class="language-sh">cargo reaper clean -p reaper_my_plugin
+</code></pre>
+<ol start="3">
+<li>Display cargo artifacts generated by <code>cargo-reaper</code> and symlinks for plugins whose keys exist in the <a href="commands/../configuration-file.html"><code>cargo-reaper</code> configuration file</a>
+without removing them.</li>
+</ol>
+<pre><code class="language-sh">cargo reaper clean --remove-artifacts --dry-run
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
+<h2 id="default-global-installation-path"><a class="header" href="#default-global-installation-path">Default Global Installation Path</a></h2>
+<p>This is the system-wide path where the REAPER binary executable is installed.
+This is different for each supported platform:</p>
+<ul>
+<li>Linux:
+<ul>
+<li>A global default is not predictable since Linux does not have a canonical package manager. Instead, <code>cargo-reaper</code> uses the
+<a href="https://crates.io/crates/which"><code>which</code></a> crate's <a href="https://docs.rs/which/7.0.3/which/fn.which_global.html"><code>which::which_global</code></a>
+function to determine its location.</li>
+</ul>
+</li>
+<li>Darwin (MacOS) -- <code>/Applications/REAPER.app</code></li>
+<li>Windows:
+<ul>
+<li>x86 (32bit) -- <code>C:\Program Files (x86)\REAPER\reaper.exe</code></li>
+<li>x86_64 (64bit) -- <code>C:\Program Files\REAPER (x64)\reaper.exe</code></li>
+<li>aarch64 (ARM) -- <code>C:\Program Files\REAPER (ARM64)\reaper.exe</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="extension-plugin"><a class="header" href="#extension-plugin">Extension Plugin</a></h2>
+<p>A C/C++ <a href="appendix/glossary.html#dynamically-linked-library">dynamically linked library</a> that when placed in REAPER's <a href="appendix/glossary.html#user-plugins"><code>UserPlugins</code></a> directory, is loaded as part of the REAPER
+application thread on launch, adding additional functionality to the program.</p>
+<h2 id="dynamically-linked-library"><a class="header" href="#dynamically-linked-library">Dynamically Linked Library</a></h2>
+<p>A compiled collection of code and data that is loaded into a program at runtime, rather than being statically included in the final executable
+during compilation.</p>
+<p>REAPER <a href="appendix/glossary.html#extension-plugin">extension plugins</a> are dynamically linked libraries, which have differing extension names depending on their target platform:</p>
+<ul>
+<li>Linux -- <code>.so</code></li>
+<li>Darwin (MacOS) -- <code>.dylib</code></li>
+<li>Windows -- <code>.dll</code></li>
+</ul>
+<h2 id="user-plugins"><a class="header" href="#user-plugins">User Plugins</a></h2>
+<p>The <code>UserPlugins</code> directory is the file system location created the first time REAPER is launched that the REAPER application thread loads <a href="appendix/glossary.html#extension-plugin">extension plugins</a> from.
+This is different for each supported platform:</p>
+<ul>
+<li>Linux -- <code>~/.config/REAPER/UserPlugins</code></li>
+<li>Darwin (MacOS) -- <code>~/Library/Application\ Support/REAPER/UserPlugins</code></li>
+<li>Windows -- <code>%APPDATA%\REAPER\UserPlugins</code></li>
+</ul>
+<h2 id="plugin-manifest-1"><a class="header" href="#plugin-manifest-1">Plugin Manifest</a></h2>
+<p>A plugin manifest, in the context of <code>cargo-reaper</code>, is the same as a <a href="https://doc.rust-lang.org/cargo/appendix/glossary.html#manifest">Cargo manifest</a>, which contains
+a <a href="https://doc.rust-lang.org/cargo/appendix/glossary.html#package">package</a> with a <a href="https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target">library target</a> of <a href="https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-crate-type-field"><code>crate-type</code></a> <a href="https://doc.rust-lang.org/reference/linkage.html#r-link.cdylib"><code>cdylib</code></a>.</p>
+<p>See the <a href="appendix/../plugin-manifest.html"><code>Plugin Manifest</code></a> section for detailed information on configuring a <code>cargo-reaper</code> plugin manifest.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+    </div>
+    </body>
+</html>
