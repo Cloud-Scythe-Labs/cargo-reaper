@@ -4,6 +4,25 @@ pub(crate) use colored::Colorize;
 
 use crate::error::{Message, TomlErrorEmitter};
 
+/// The REAPER executable binary name.
+pub(crate) const BINARY_NAME: &str = "reaper";
+
+/// The global default REAPER executable file path for `x86_64-windows` (64bit)
+#[cfg(all(target_arch = "x86_64", target_os = "windows"))]
+pub(crate) const GLOBAL_DEFAULT_PATH: &str = r"C:\Program Files\REAPER (x64)\reaper.exe";
+
+/// The global default REAPER executable file path for `x86-windows` (32bit)
+#[cfg(all(target_arch = "x86", target_os = "windows"))]
+pub(crate) const GLOBAL_DEFAULT_PATH: &str = r"C:\Program Files (x86)\REAPER\reaper.exe";
+
+/// The global default REAPER executable file path for `aarch64-windows` (ARM64)
+#[cfg(all(target_arch = "aarch64", target_os = "windows"))]
+pub(crate) const GLOBAL_DEFAULT_PATH: &str = r"C:\Program Files\REAPER (ARM64)\reaper.exe";
+
+/// The global default REAPER executable file path for `x86_64-darwin` (Intel) and `aarch64-darwin` (Apple Silicon)
+#[cfg(target_os = "macos")]
+pub(crate) const GLOBAL_DEFAULT_PATH: &str = "/Applications/REAPER.app/Contents/MacOS/REAPER";
+
 /// Represents a REAPER plugin's manifest information.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct PluginManifest {
