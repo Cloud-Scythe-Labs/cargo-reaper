@@ -1,7 +1,7 @@
 use std::env;
 
 use crate::{
-    cli::{CargoReaperArgs, CargoReaperCommand, Parser},
+    cli::{CargoReaperArgs, CargoReaperCommand, CommandFactory, FromArgMatches},
     command::{build::build, clean::clean, link::link, list::list, new::new, run::run},
 };
 
@@ -20,7 +20,14 @@ async fn main() -> anyhow::Result<()> {
         args.remove(1);
     }
 
-    let args = CargoReaperArgs::parse_from(args);
+    let cmd = CargoReaperArgs::command().after_help(
+        // TODO: Check to see if the default location is available if not on $PATH
+        which::which("reaper")
+            .map(|reaper| format!("{}\n  {}", "\x1b[4mREAPER:\x1b[0m", reaper.display()))
+            .unwrap_or_default(),
+    );
+
+    let args = CargoReaperArgs::from_arg_matches(&cmd.get_matches_from(args)).unwrap();
 
     match args.command {
         CargoReaperCommand::New { path } => new(path).await,

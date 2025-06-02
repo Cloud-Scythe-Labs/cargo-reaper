@@ -1,12 +1,13 @@
 use std::path;
 
-pub(crate) use clap::Parser;
-use clap::ValueHint;
+pub(crate) use clap::{CommandFactory, FromArgMatches};
+use clap::{Parser, ValueHint};
 
 #[derive(Debug, Parser)]
 #[command(
     name = "cargo-reaper",
     version,
+    author,
     about = "A Cargo plugin for developing REAPER extension plugins with Rust.",
     long_about = "`cargo-reaper` is a convenience wrapper around Cargo that adds a post-build hook to streamline REAPER extension development. It automatically renames the compiled plugin to include the required `reaper_` prefix and symlinks it to REAPER’s `UserPlugins` directory.
 
