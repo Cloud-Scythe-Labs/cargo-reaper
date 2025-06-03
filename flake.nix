@@ -86,6 +86,7 @@
               # We do not symlink the plugin since the `UserPlugins` directory is in
               # the `$HOME` directory which is inaccessible to the sandbox.
               buildPhaseCargoCommand = ''
+                ls .
                 cargo reaper build --no-symlink \
                   -p ${package} --lib \
                   --release
@@ -98,11 +99,29 @@
               # Bypass crane checks for target install paths.
               doNotPostBuildInstallCargoBinaries = true;
             });
-          testArgs = src: {
+          cargoReaperConfigFilter = from: lib.fileset.fileFilter (file: (lib.match "\.?reaper\.toml" file.name) != null) from;
+          commonTestArgs = src: {
             inherit src;
-            version = "0.1.0";
             strictDeps = true;
           };
+
+          packageManifestTestArgs =
+            let
+              root = ./tests/test_data/package_manifest;
+              src = lib.fileset.toSource {
+                inherit root;
+                fileset = lib.fileset.unions [
+                  (root + "/Cargo.toml")
+                  (root + "/Cargo.lock")
+                  (root + "/src")
+                  (cargoReaperConfigFilter (root + "/reaper.toml"))
+                ];
+              };
+              individualCrateArgs = commonTestArgs src;
+              cargoArtifacts = craneLib.buildDepsOnly individualCrateArgs;
+            in (individualCrateArgs // {
+              inherit cargoArtifacts;
+            });
         in
         {
           # Build the crate as part of `nix flake check` for convenience
@@ -150,24 +169,10 @@
             cargoNextestPartitionsExtraArgs = "--no-tests=warn";
           });
 
-          test-cargo-reaper-build =
-            let
-              root = ./tests/test_data/package_manifest;
-              src = lib.fileset.toSource {
-                inherit root;
-                fileset = lib.fileset.unions [
-                  (root + "/Cargo.toml")
-                  (root + "/Cargo.lock")
-                  (root + "/reaper.toml")
-                  (root + "/src")
-                ];
-              };
-              cargoReaperBuildArgs = (testArgs (craneLib.cleanCargoSources root)) // { inherit src; };
-            in
-            buildReaperExtension (cargoReaperBuildArgs // {
-              package = "package_extension";
-              plugin = "reaper_package_ext";
-            });
+          test-cargo-reaper-build = buildReaperExtension (packageManifestTestArgs // {
+            package = "package_extension";
+            plugin = "reaper_package_ext";
+          });
         };
 
       # These checks require `--option sandbox false`.
