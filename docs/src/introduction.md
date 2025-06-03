@@ -7,7 +7,7 @@ which provides Rust bindings and tools for creating REAPER plugins -- including 
 ## Motivation
 
 Developing REAPER extension plugins requires intimate knowledge about REAPER and its behavior on each platform that it supports.
-This information is somewhat esoteric and not listed in the development docs, making extension plugin development a trail-and-error ordeal.
+This information is somewhat esoteric and not listed in the development docs, making extension plugin development a trial-and-error ordeal.
 `cargo-reaper` aims to simplify the learning curve by providing an easy-to-use, intuitive interface for initializing, building,
 testing and publishing REAPER extension plugins.
 

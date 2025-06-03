@@ -30,14 +30,14 @@ crate-type = ["cdylib"]
 reaper_my_plugin = "./."
 ```
 
-## Workspace Manifest
+## Workspace Manifests
 
 Examples of acceptable workspace patterns and their corresponding [configuration file](./configuration-file.md)s.
 
-### Workspace with Multiple Package Manifests
+### Workspace Manifest
 
 An example of a virtual workspace that does not contain a package attribute, but consists of multiple members,
-each of which being a package manifest with the [plugin manifest criteria](#plugin-manifest).
+each of which being a package manifest meeting the [plugin manifest criteria](#plugin-manifest).
 
 ```toml
 # Cargo.toml
@@ -54,19 +54,21 @@ reaper_my_plugin_2 = "./crates/my_plugin_2"
 
 ### Workspace Package Manifest
 
-An example of a workspace package manifest. The library target [`path`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-path-field) field may be necessary in some cases, depending on the
-workspace layout. For brevity, the default path is specified below.
+An example of a workspace package manifest and its corresponding [configuration file](./configuration-file.md).
 
 ```toml
 # Cargo.toml
-[workspace.package]
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[package]
 name = "my_workspace_package"
 version = "0.1.0"
 edition = "2024"
 
 [lib]
 name = "my_extension_plugin"
-path = "./src/lib.rs"
 crate-type = ["cdylib"]
 ```
 ```toml

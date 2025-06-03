@@ -75,10 +75,10 @@
     {
       checks =
         let
-          buildReaperExtension = { package, plugin ? package, ... }@crateArgs: 
+          buildReaperExtension = { package, plugin ? package, ... }@crateArgs:
             craneLib.buildPackage (crateArgs // {
               pname = package;
-              nativeBuildInputs = (crateArgs.nativeBuildInputs or []) ++ [
+              nativeBuildInputs = (crateArgs.nativeBuildInputs or [ ]) ++ [
                 # Add `cargo-reaper` as a build time dependency of this derivation.
                 self.packages.${system}.default
               ];
@@ -99,27 +99,52 @@
               # Bypass crane checks for target install paths.
               doNotPostBuildInstallCargoBinaries = true;
             });
-          cargoReaperConfigFilter = from: lib.fileset.fileFilter (file: (lib.match "\.?reaper\.toml" file.name) != null) from;
+          cargoReaperConfigFilter = from: lib.fileset.fileFilter (file: (builtins.match "\.?reaper\.toml" file.name) != null) from;
           commonTestArgs = src: {
             inherit src;
             strictDeps = true;
           };
 
+          testFileset = root: lib.fileset.toSource {
+            inherit root;
+            fileset = lib.fileset.unions [
+              (root + "/Cargo.toml")
+              (root + "/Cargo.lock")
+              (root + "/src")
+              (cargoReaperConfigFilter (root + "/reaper.toml"))
+            ];
+          };
+
           packageManifestTestArgs =
             let
-              root = ./tests/test_data/package_manifest;
-              src = lib.fileset.toSource {
-                inherit root;
-                fileset = lib.fileset.unions [
-                  (root + "/Cargo.toml")
-                  (root + "/Cargo.lock")
-                  (root + "/src")
-                  (cargoReaperConfigFilter (root + "/reaper.toml"))
-                ];
-              };
+              root = ./tests/plugin_manifests/package_manifest;
+              src = testFileset root;
               individualCrateArgs = commonTestArgs src;
               cargoArtifacts = craneLib.buildDepsOnly individualCrateArgs;
-            in (individualCrateArgs // {
+            in
+            (individualCrateArgs // {
+              inherit cargoArtifacts;
+            });
+
+          workspaceManifestTestArgs =
+            let
+              root = ./tests/plugin_manifests/workspace_manifest;
+              src = testFileset root;
+              individualCrateArgs = commonTestArgs src;
+              cargoArtifacts = craneLib.buildDepsOnly individualCrateArgs;
+            in
+            (individualCrateArgs // {
+              inherit cargoArtifacts;
+            });
+
+          workspacePackageManifestTestArgs =
+            let
+              root = ./tests/plugin_manifests/workspace_package_manifest;
+              src = testFileset root;
+              individualCrateArgs = commonTestArgs src;
+              cargoArtifacts = craneLib.buildDepsOnly individualCrateArgs;
+            in
+            (individualCrateArgs // {
               inherit cargoArtifacts;
             });
         in
@@ -169,10 +194,73 @@
             cargoNextestPartitionsExtraArgs = "--no-tests=warn";
           });
 
-          test-cargo-reaper-build = buildReaperExtension (packageManifestTestArgs // {
-            package = "package_extension";
+          test-cargo-reaper-build-package-manifest = buildReaperExtension (packageManifestTestArgs // {
+            package = "package_manifest";
             plugin = "reaper_package_ext";
           });
+          test-cargo-reaper-build-workspace-manifest = buildReaperExtension (workspaceManifestTestArgs // {
+            package = "extension_0";
+            plugin = "reaper_ext_0";
+          });
+          test-cargo-reaper-build-workspace-package-manifest = buildReaperExtension (workspacePackageManifestTestArgs // {
+            package = "workspace_package_manifest";
+            plugin = "reaper_workspace_package_ext";
+          });
+
+          test-cargo-reaper-list-package-manifest = pkgs.stdenv.mkDerivation {
+            name = "test-cargo-reaper-list-package-manifest";
+            src = testFileset ./tests/plugin_manifests/package_manifest;
+            buildInputs = [
+              self.packages.${system}.default
+            ];
+            phases = [
+              "unpackPhase"
+              "buildPhase"
+              "installPhase"
+            ];
+            buildPhase = ''
+              cargo-reaper list
+            '';
+            installPhase = ''
+              mkdir -p $out
+            '';
+          };
+          test-cargo-reaper-list-workspace-manifest = pkgs.stdenv.mkDerivation {
+            name = "test-cargo-reaper-list-workspace-manifest";
+            src = testFileset ./tests/plugin_manifests/workspace_manifest;
+            buildInputs = [
+              self.packages.${system}.default
+            ];
+            phases = [
+              "unpackPhase"
+              "buildPhase"
+              "installPhase"
+            ];
+            buildPhase = ''
+              cargo-reaper list
+            '';
+            installPhase = ''
+              mkdir -p $out
+            '';
+          };
+          test-cargo-reaper-list-workspace-package-manifest = pkgs.stdenv.mkDerivation {
+            name = "test-cargo-reaper-list-workspace-package-manifest";
+            src = testFileset ./tests/plugin_manifests/workspace_package_manifest;
+            buildInputs = [
+              self.packages.${system}.default
+            ];
+            phases = [
+              "unpackPhase"
+              "buildPhase"
+              "installPhase"
+            ];
+            buildPhase = ''
+              cargo-reaper list
+            '';
+            installPhase = ''
+              mkdir -p $out
+            '';
+          };
         };
 
       # These checks require `--option sandbox false`.
@@ -183,7 +271,6 @@
         test-cargo-reaper-new = pkgs.stdenv.mkDerivation {
           name = "test-cargo-reaper-new";
           buildInputs = [
-            rustToolchain.fenix-pkgs
             self.packages.${system}.default
           ];
           doCheck = true;
@@ -193,7 +280,7 @@
             "installPhase"
           ];
           buildPhase = ''
-            cargo reaper new reaper_test
+            cargo-reaper new reaper_test
           '';
           checkPhase = ''
             if [ ! -d "reaper_test" ]; then

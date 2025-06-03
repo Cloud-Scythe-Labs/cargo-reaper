@@ -60,7 +60,6 @@ impl fmt::Display for PluginManifest {
 
 pub(crate) fn find_project_root() -> anyhow::Result<path::PathBuf> {
     let mut current_dir = env::current_dir()?;
-    dbg!(&current_dir);
 
     loop {
         if current_dir.join("Cargo.toml").is_file() && current_dir.join(".reaper.toml").is_file()
