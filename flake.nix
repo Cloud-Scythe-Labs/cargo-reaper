@@ -38,7 +38,10 @@
     }:
     flake-utils.lib.eachDefaultSystem (system:
     let
-      pkgs = nixpkgs.legacyPackages.${system};
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
 
       inherit (pkgs) lib;
 
@@ -70,73 +73,133 @@
       });
     in
     {
-      checks = {
-        # Build the crate as part of `nix flake check` for convenience
-        inherit cargo-reaper-drv;
-
-        # Run clippy (and deny all warnings) on the crate source,
-        # again, reusing the dependency artifacts from above.
-        #
-        # Note that this is done as a separate derivation so that
-        # we can block the CI if there are issues here, but not
-        # prevent downstream consumers from building our crate by itself.
-        cargo-clippy = craneLib.cargoClippy (commonArgs // {
-          inherit cargoArtifacts;
-          cargoClippyExtraArgs = "--all-targets -- --deny warnings";
-        });
-
-        cargo-doc = craneLib.cargoDoc (commonArgs // {
-          inherit cargoArtifacts;
-        });
-
-        # Check formatting
-        cargo-fmt = craneLib.cargoFmt {
-          inherit src;
-        };
-
-        taplo-fmt = craneLib.taploFmt {
-          src = lib.sources.sourceFilesBySuffices src [ ".toml" ];
-        };
-
-        # Audit dependencies
-        cargo-audit = craneLib.cargoAudit {
-          inherit src advisory-db;
-        };
-
-        # Audit licenses
-        cargo-deny = craneLib.cargoDeny {
-          inherit src;
-        };
-
-        # Run tests with cargo-nextest
-        cargo-nextest = craneLib.cargoNextest (commonArgs // {
-          inherit cargoArtifacts;
-          partitions = 1;
-          partitionType = "count";
-          cargoNextestPartitionsExtraArgs = "--no-tests=warn";
-        });
-      } // lib.optionalAttrs pkgs.stdenv.isLinux {
-        test-cargo-reaper-new =
-          let
-            tests = import ./tests {
-              inherit pkgs;
-              imports = [
-                {
-                  networking.useDHCP = true;
-                  environment.systemPackages = [
-                    self.packages.${system}.default
-                  ];
-                }
+      checks =
+        let
+          buildReaperExtension = { package, plugin ? package, ... }@crateArgs: 
+            craneLib.buildPackage (crateArgs // {
+              pname = package;
+              nativeBuildInputs = (crateArgs.nativeBuildInputs or []) ++ [
+                # Add `cargo-reaper` as a build time dependency of this derivation.
+                self.packages.${system}.default
               ];
-            };
-          in
-          pkgs.nixosTest {
-            name = "test-cargo-reaper-new";
-            nodes = {
-              inherit (tests) machine;
-            };
-            testScript = tests.testCargoReaperNew;
+              # Run `cargo-reaper`, passing trailing args to the cargo invocation.
+              # We do not symlink the plugin since the `UserPlugins` directory is in
+              # the `$HOME` directory which is inaccessible to the sandbox.
+              buildPhaseCargoCommand = ''
+                cargo reaper build --no-symlink \
+                  -p ${package} --lib \
+                  --release
+              '';
+              # Include extension plugin in the build result.
+              installPhaseCommand = ''
+                mkdir -p $out/lib
+                mv target/release/${plugin}.* $out/lib
+              '';
+              # Bypass crane checks for target install paths.
+              doNotPostBuildInstallCargoBinaries = true;
+            });
+          testArgs = src: {
+            inherit src;
+            version = "0.1.0";
+            strictDeps = true;
           };
+        in
+        {
+          # Build the crate as part of `nix flake check` for convenience
+          inherit cargo-reaper-drv;
+
+          # Run clippy (and deny all warnings) on the crate source,
+          # again, reusing the dependency artifacts from above.
+          #
+          # Note that this is done as a separate derivation so that
+          # we can block the CI if there are issues here, but not
+          # prevent downstream consumers from building our crate by itself.
+          cargo-clippy = craneLib.cargoClippy (commonArgs // {
+            inherit cargoArtifacts;
+            cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+          });
+
+          cargo-doc = craneLib.cargoDoc (commonArgs // {
+            inherit cargoArtifacts;
+          });
+
+          # Check formatting
+          cargo-fmt = craneLib.cargoFmt {
+            inherit src;
+          };
+
+          taplo-fmt = craneLib.taploFmt {
+            src = lib.sources.sourceFilesBySuffices src [ ".toml" ];
+          };
+
+          # Audit dependencies
+          cargo-audit = craneLib.cargoAudit {
+            inherit src advisory-db;
+          };
+
+          # Audit licenses
+          cargo-deny = craneLib.cargoDeny {
+            inherit src;
+          };
+
+          # Run tests with cargo-nextest
+          cargo-nextest = craneLib.cargoNextest (commonArgs // {
+            inherit cargoArtifacts;
+            partitions = 1;
+            partitionType = "count";
+            cargoNextestPartitionsExtraArgs = "--no-tests=warn";
+          });
+
+          test-cargo-reaper-build =
+            let
+              root = ./tests/test_data/package_manifest;
+              src = lib.fileset.toSource {
+                inherit root;
+                fileset = lib.fileset.unions [
+                  (root + "/Cargo.toml")
+                  (root + "/Cargo.lock")
+                  (root + "/reaper.toml")
+                  (root + "/src")
+                ];
+              };
+              cargoReaperBuildArgs = (testArgs (craneLib.cleanCargoSources root)) // { inherit src; };
+            in
+            buildReaperExtension (cargoReaperBuildArgs // {
+              package = "package_extension";
+              plugin = "reaper_package_ext";
+            });
+        };
+
+      # These checks require `--option sandbox false`.
+      checks-no-sandbox = {
+        # TODO: add a `--offline` feature to `cargo reaper new`, then
+        # pre-populate the cargo temp directory using `fetchFromGithub`.
+        # Once we can invoke it in offline mode, we can move this back to checks.
+        test-cargo-reaper-new = pkgs.stdenv.mkDerivation {
+          name = "test-cargo-reaper-new";
+          buildInputs = [
+            rustToolchain.fenix-pkgs
+            self.packages.${system}.default
+          ];
+          doCheck = true;
+          phases = [
+            "buildPhase"
+            "checkPhase"
+            "installPhase"
+          ];
+          buildPhase = ''
+            cargo reaper new reaper_test
+          '';
+          checkPhase = ''
+            if [ ! -d "reaper_test" ]; then
+              exit 1
+            fi
+          '';
+          installPhase = ''
+            mkdir -p $out
+            mv reaper_test $out/
+          '';
+        };
       };
 
       packages = rec {

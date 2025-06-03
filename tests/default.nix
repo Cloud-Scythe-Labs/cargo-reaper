@@ -33,9 +33,6 @@ in
     {
       inherit imports;
 
-      # REAPER is unfree software
-      nixpkgs.config.allowUnfree = true;
-
       users.users = {
         "${user}" = {
           isNormalUser = true;
