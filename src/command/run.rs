@@ -1,6 +1,6 @@
 use std::{io, path, process};
 
-use crate::util::{BINARY_NAME, Colorize, GLOBAL_DEFAULT_PATH};
+use crate::util::{self, BINARY_NAME, Colorize};
 
 /// Launch the REAPER binary application. The current working directory takes priority,
 /// but if the binary file is not on `$PATH`, the global default location will be used.
@@ -10,14 +10,7 @@ use crate::util::{BINARY_NAME, Colorize, GLOBAL_DEFAULT_PATH};
 /// # Usage
 ///
 /// This is run automatically when running the `cargo reaper run` command.
-fn _run<G>(
-    binary_name: &str,
-    override_binary: Option<path::PathBuf>,
-    run_global_default: G,
-) -> anyhow::Result<()>
-where
-    G: FnOnce() -> io::Result<process::ExitStatus>,
-{
+pub(crate) fn run(override_binary: Option<path::PathBuf>) -> anyhow::Result<()> {
     override_binary
         .inspect(|reaper| {
             println!(
@@ -26,7 +19,7 @@ where
                 reaper.display()
             )
         })
-        .or_else(|| which::which(binary_name).ok())
+        .or_else(|| which::which(BINARY_NAME).ok())
         .map_or_else(run_global_default, |reaper| {
             println!(
                 "     {} REAPER executable ({})",
@@ -45,71 +38,19 @@ where
     Ok(())
 }
 
-#[cfg(target_os = "windows")]
-pub(crate) fn run(override_binary: Option<path::PathBuf>) -> anyhow::Result<()> {
-    _run(BINARY_NAME, override_binary, || {
-        let reaper = path::PathBuf::from(GLOBAL_DEFAULT_PATH);
-        if reaper.exists() {
-            println!(
-                "     {} global default REAPER executable ({})",
-                "Running".green().bold(),
-                reaper.display(),
-            );
+/// Run the global default REAPER binary executable.
+fn run_global_default() -> io::Result<process::ExitStatus> {
+    util::os::locate_global_default().and_then(|reaper| {
+        println!(
+            "     {} global default REAPER executable ({})",
+            "Running".green().bold(),
+            reaper.display(),
+        );
 
-            return process::Command::new(reaper)
-                .stdin(process::Stdio::inherit())
-                .stdout(process::Stdio::inherit())
-                .stderr(process::Stdio::inherit())
-                .status();
-        }
-        Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            "Unable to locate REAPER executable. Is REAPER installed?\n\nTip: Try overriding the default executable path with `--exec <PATH>`.",
-        ))
-    })
-}
-
-#[cfg(target_os = "linux")]
-pub(crate) fn run(override_binary: Option<path::PathBuf>) -> anyhow::Result<()> {
-    _run(BINARY_NAME, override_binary, || {
-        which::which_global(BINARY_NAME)
-            .map_err(|err| io::Error::new(io::ErrorKind::NotFound, err))
-            .and_then(|reaper| {
-                println!(
-                    "     {} global default REAPER executable ({})",
-                    "Running".green().bold(),
-                    reaper.display(),
-                );
-
-                process::Command::new(reaper)
-                    .stdin(process::Stdio::inherit())
-                    .stdout(process::Stdio::inherit())
-                    .stderr(process::Stdio::inherit())
-                    .status()
-            })
-    })
-}
-
-#[cfg(target_os = "macos")]
-pub(crate) fn run(override_binary: Option<path::PathBuf>) -> anyhow::Result<()> {
-    _run(BINARY_NAME, override_binary, || {
-        let reaper = path::PathBuf::from(GLOBAL_DEFAULT_PATH);
-        if reaper.exists() {
-            println!(
-                "     {} global default REAPER executable ({})",
-                "Running".green().bold(),
-                reaper.display()
-            );
-
-            return process::Command::new(reaper)
-                .stdin(process::Stdio::inherit())
-                .stdout(process::Stdio::inherit())
-                .stderr(process::Stdio::inherit())
-                .status();
-        }
-        Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            "Unable to locate REAPER executable. Is REAPER installed?\n\nTip: Try overriding the default executable path with `--exec <PATH>`.",
-        ))
+        process::Command::new(reaper)
+            .stdin(process::Stdio::inherit())
+            .stdout(process::Stdio::inherit())
+            .stderr(process::Stdio::inherit())
+            .status()
     })
 }

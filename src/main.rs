@@ -3,6 +3,7 @@ use std::env;
 use crate::{
     cli::{CargoReaperArgs, CargoReaperCommand, CommandFactory, FromArgMatches},
     command::{build::build, clean::clean, link::link, list::list, new::new, run::run},
+    util::BINARY_NAME,
 };
 
 pub(crate) mod cli;
@@ -20,12 +21,12 @@ async fn main() -> anyhow::Result<()> {
         args.remove(1);
     }
 
-    let cmd = CargoReaperArgs::command().after_help(
-        // TODO: Check to see if the default location is available if not on $PATH
-        which::which("reaper")
-            .map(|reaper| format!("{}\n  {}", "\x1b[4mREAPER:\x1b[0m", reaper.display()))
-            .unwrap_or_default(),
-    );
+    let cmd = CargoReaperArgs::command().after_help(CargoReaperArgs::reaper_help_heading(
+        which::which(BINARY_NAME)
+            .or_else(|_| util::os::locate_global_default())
+            .ok()
+            .as_deref(),
+    ));
 
     let args = CargoReaperArgs::from_arg_matches(&cmd.get_matches_from(args)).unwrap();
 

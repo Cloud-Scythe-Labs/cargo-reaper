@@ -17,6 +17,18 @@ pub struct CargoReaperArgs {
     #[command(subcommand)]
     pub(crate) command: CargoReaperCommand,
 }
+impl CargoReaperArgs {
+    /// Creates the `clap::Command::after_help` message which shows the detected path
+    /// to a REAPER binary executable, if any.
+    pub(crate) fn reaper_help_heading(reaper_bin_path: Option<&path::Path>) -> String {
+        format!(
+            "{}\n  {}",
+            "\x1b[4mREAPER:\x1b[0m",
+            crate::util::ReaperBinaryPath(reaper_bin_path)
+        )
+    }
+}
+
 #[derive(Debug, Clone, clap::Subcommand)]
 pub enum CargoReaperCommand {
     /// Create a new REAPER extension plugin from a template at <PATH>.
