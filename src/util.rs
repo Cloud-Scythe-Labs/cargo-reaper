@@ -176,13 +176,13 @@ pub(crate) fn validate_plugin(
 ///
 /// assert!(locate_global_default().is_ok());
 /// ```
-pub(crate) fn _locate_global_default<G>(global_locator_method: G) -> io::Result<path::PathBuf>
+pub(crate) fn _locate_global_default<G>(run_global_locator_method: G) -> io::Result<path::PathBuf>
 where
     G: FnOnce() -> Option<path::PathBuf>,
 {
-    global_locator_method().ok_or(io::Error::new(
+    run_global_locator_method().ok_or(io::Error::new(
         io::ErrorKind::NotFound,
-        "Unable to locate REAPER executable. Is REAPER installed?\n\nTip: Try overriding the default executable path with `--exec <PATH>`.",
+        "Unable to locate REAPER executable — Run `cargo reaper -h` for help, or override the default executable path with `--exec <PATH>`.",
     ))
 }
 
