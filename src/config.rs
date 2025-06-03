@@ -10,7 +10,7 @@ pub(crate) struct ReaperPluginConfig {
     #[serde(skip)]
     file: path::PathBuf,
 
-    /// The contents of a `reaper.toml` config file as a [`std::str::String`].
+    /// The contents of a `reaper.toml` config file as a [`std::string::String`].
     #[serde(skip)]
     contents: String,
 

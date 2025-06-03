@@ -5,7 +5,7 @@ use codespan_reporting::{
     term::{self, termcolor},
 };
 
-/// An identifier that corresponds to some [`codespan_reporting::file::SimpleFile`].
+/// An identifier that corresponds to some [`codespan_reporting::files::SimpleFile`].
 pub(crate) type FileId = usize;
 
 /// The message to display for some diagnostic error.

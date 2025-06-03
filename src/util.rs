@@ -74,7 +74,7 @@ pub(crate) fn find_project_root() -> anyhow::Result<path::PathBuf> {
     }
 
     anyhow::bail!(
-        "Unable to find project root directory. Please ensure a reaper.toml or .reaper.toml file is present in the project root, and try again."
+        "Unable to find project root directory. Please ensure a `reaper.toml` or `.reaper.toml` file is present in the project root, and try again."
     )
 }
 
@@ -162,13 +162,37 @@ pub(crate) fn validate_plugin(
     Ok(manifest)
 }
 
+/// Handles locating the REAPER default installation path.
+/// Global location method varies for each operating system, i.e. Linux does not have a default global install location.
+///
+/// > Note: This function is platform agnostic
+///
+/// # Usage
+///
+/// This is the inner method of `locate_global_default` defined for each operating system in `crate::util::os`:
+///
+/// ```rust
+/// use crate::util::os::locate_global_default;
+///
+/// assert!(locate_global_default().is_ok());
+/// ```
+pub(crate) fn _locate_global_default<G>(global_locator_method: G) -> io::Result<path::PathBuf>
+where
+    G: FnOnce() -> Option<path::PathBuf>,
+{
+    global_locator_method().ok_or(io::Error::new(
+        io::ErrorKind::NotFound,
+        "Unable to locate REAPER executable. Is REAPER installed?\n\nTip: Try overriding the default executable path with `--exec <PATH>`.",
+    ))
+}
+
 /// Rename the resulting extension plugin, returning the new plugin path if it succeeds.
 ///
 /// > Note: This function is platform agnostic
 ///
 /// # Usage
 ///
-/// This is run automatically when running the `cargo reaper` command.
+/// This is run automatically when running the `cargo reaper build` command.
 pub(crate) fn _rename_plugin(
     project_root: &path::Path,
     profile: &str,
@@ -291,7 +315,7 @@ pub(crate) mod os {
 
     use std::{io, os, path};
 
-    use super::{_remove_plugin_symlink, _rename_plugin, _symlink_plugin};
+    use super::{_locate_global_default, _remove_plugin_symlink, _rename_plugin, _symlink_plugin};
 
     /// The dynamically linked C library Windows extension
     pub(crate) const WINDOWS_PLUGIN_EXT: &str = ".dll";
@@ -309,11 +333,10 @@ pub(crate) mod os {
     pub(crate) const GLOBAL_DEFAULT_PATH: &str = r"C:\Program Files\REAPER (ARM64)\reaper.exe";
 
     pub(crate) fn locate_global_default() -> io::Result<path::PathBuf> {
-        let reaper = path::PathBuf::from(GLOBAL_DEFAULT_PATH);
-        (reaper.exists()).then_some(reaper).ok_or(io::Error::new(
-            io::ErrorKind::NotFound,
-            "Unable to locate REAPER executable. Is REAPER installed?\n\nTip: Try overriding the default executable path with `--exec <PATH>`.",
-        ))
+        _locate_global_default(|| {
+            let reaper = path::PathBuf::from(GLOBAL_DEFAULT_PATH);
+            (reaper.exists()).then_some(reaper)
+        })
     }
 
     pub(crate) fn from_plugin_file_name(lib_name: &str) -> String {
@@ -379,16 +402,16 @@ pub(crate) mod os {
 
     use std::{io, os, path};
 
-    use super::{_remove_plugin_symlink, _rename_plugin, _symlink_plugin, BINARY_NAME};
+    use super::{
+        _locate_global_default, _remove_plugin_symlink, _rename_plugin, _symlink_plugin,
+        BINARY_NAME,
+    };
 
     /// The dynamically linked C library Linux extension
     pub(crate) const LINUX_PLUGIN_EXT: &str = ".so";
 
     pub(crate) fn locate_global_default() -> io::Result<path::PathBuf> {
-        which::which_global(BINARY_NAME).map_err(|err| io::Error::new(
-            io::ErrorKind::NotFound,
-            format!("Unable to locate REAPER executable. Is REAPER installed?\n{err:?}\n\nTip: Try overriding the default executable path with `--exec <PATH>`.")
-        ))
+        _locate_global_default(|| which::which_global(BINARY_NAME).ok())
     }
 
     pub(crate) fn from_plugin_file_name(lib_name: &str) -> String {
@@ -443,7 +466,7 @@ pub(crate) mod os {
 
     use std::{io, os, path};
 
-    use super::{_remove_plugin_symlink, _rename_plugin, _symlink_plugin};
+    use super::{_locate_global_default, _remove_plugin_symlink, _rename_plugin, _symlink_plugin};
 
     /// The dynamically linked C library MacOS (Darwin) extension
     pub(crate) const DARWIN_PLUGIN_EXT: &str = ".dylib";
@@ -453,11 +476,10 @@ pub(crate) mod os {
     pub(crate) const GLOBAL_DEFAULT_PATH: &str = "/Applications/REAPER.app/Contents/MacOS/REAPER";
 
     pub(crate) fn locate_global_default() -> io::Result<path::PathBuf> {
-        let reaper = path::PathBuf::from(GLOBAL_DEFAULT_PATH);
-        (reaper.exists()).then_some(reaper).ok_or(io::Error::new(
-            io::ErrorKind::NotFound,
-            "Unable to locate REAPER executable. Is REAPER installed?\n\nTip: Try overriding the default executable path with `--exec <PATH>`.",
-        ))
+        _locate_global_default(|| {
+            let reaper = path::PathBuf::from(GLOBAL_DEFAULT_PATH);
+            (reaper.exists()).then_some(reaper)
+        })
     }
 
     pub(crate) fn from_plugin_file_name(lib_name: &str) -> String {

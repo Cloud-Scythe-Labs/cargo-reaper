@@ -31,6 +31,7 @@ impl CargoReaperArgs {
 
 #[derive(Debug, Clone, clap::Subcommand)]
 pub enum CargoReaperCommand {
+    #[allow(rustdoc::invalid_html_tags)] // rustdoc things <PATH> is an HTML tag...
     /// Create a new REAPER extension plugin from a template at <PATH>.
     New { path: path::PathBuf },
 
