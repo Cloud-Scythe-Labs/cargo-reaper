@@ -22,13 +22,14 @@ jobs:
             extra-substituters = https://cloud-scythe-labs.cachix.org
             extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
 
-      - name: Build Docs
-        run: nix develop -c mdbook build docs
-
       - name: Copy favicons
         run: |
-          cp assets/rea-corro.svg docs/book/favicon.svg
-          cp assets/favicon.png docs/book/favicon.png
+          mkdir -p docs/theme
+          cp assets/rea-corro.svg docs/theme/favicon.svg
+          cp assets/favicon.png docs/theme/favicon.png
+
+      - name: Build Docs
+        run: nix develop -c mdbook build docs
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
