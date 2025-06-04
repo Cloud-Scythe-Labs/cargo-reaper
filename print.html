@@ -162,7 +162,7 @@ It serves as a companion for the <a href="https://github.com/helgoboss/reaper-rs
 which provides Rust bindings and tools for creating REAPER plugins -- including a procedural macro that bootstraps your plugin as a native REAPER extension.</p>
 <h2 id="motivation"><a class="header" href="#motivation">Motivation</a></h2>
 <p>Developing REAPER extension plugins requires intimate knowledge about REAPER and its behavior on each platform that it supports.
-This information is somewhat esoteric and not listed in the development docs, making extension plugin development a trail-and-error ordeal.
+This information is somewhat esoteric and not listed in the development docs, making extension plugin development a trial-and-error ordeal.
 <code>cargo-reaper</code> aims to simplify the learning curve by providing an easy-to-use, intuitive interface for initializing, building,
 testing and publishing REAPER extension plugins.</p>
 <p>Throughout this book are references to REAPER specific terminology, most of which you may safely ignore since <code>cargo-reaper</code>
@@ -234,11 +234,11 @@ crate-type = ["cdylib"]
 [extension_plugins]
 reaper_my_plugin = "./."
 </code></pre>
-<h2 id="workspace-manifest"><a class="header" href="#workspace-manifest">Workspace Manifest</a></h2>
+<h2 id="workspace-manifests"><a class="header" href="#workspace-manifests">Workspace Manifests</a></h2>
 <p>Examples of acceptable workspace patterns and their corresponding <a href="./configuration-file.html">configuration file</a>s.</p>
-<h3 id="workspace-with-multiple-package-manifests"><a class="header" href="#workspace-with-multiple-package-manifests">Workspace with Multiple Package Manifests</a></h3>
+<h3 id="workspace-manifest"><a class="header" href="#workspace-manifest">Workspace Manifest</a></h3>
 <p>An example of a virtual workspace that does not contain a package attribute, but consists of multiple members,
-each of which being a package manifest with the <a href="plugin-manifest.html#plugin-manifest">plugin manifest criteria</a>.</p>
+each of which being a package manifest meeting the <a href="plugin-manifest.html#plugin-manifest">plugin manifest criteria</a>.</p>
 <pre><code class="language-toml"># Cargo.toml
 [workspace]
 resolver = "2"
@@ -250,17 +250,19 @@ reaper_my_plugin_1 = "./crates/my_plugin_1"
 reaper_my_plugin_2 = "./crates/my_plugin_2"
 </code></pre>
 <h3 id="workspace-package-manifest"><a class="header" href="#workspace-package-manifest">Workspace Package Manifest</a></h3>
-<p>An example of a workspace package manifest. The library target <a href="https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-path-field"><code>path</code></a> field may be necessary in some cases, depending on the
-workspace layout. For brevity, the default path is specified below.</p>
+<p>An example of a workspace package manifest and its corresponding <a href="./configuration-file.html">configuration file</a>.</p>
 <pre><code class="language-toml"># Cargo.toml
-[workspace.package]
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[package]
 name = "my_workspace_package"
 version = "0.1.0"
 edition = "2024"
 
 [lib]
 name = "my_extension_plugin"
-path = "./src/lib.rs"
 crate-type = ["cdylib"]
 </code></pre>
 <pre><code class="language-toml"># reaper.toml
