@@ -286,17 +286,41 @@
               tests = import ./tests {
                 inherit pkgs;
                 inherit (self.packages.${system}) cargo-reaper;
+                imports = [
+                  {
+                    environment.systemPackages = [
+                      rustToolchain.fenix-pkgs
+                      pkgs.gcc
+                    ];
+                  }
+                ];
               };
             in
             pkgs.nixosTest {
               name = "test-cargo-reaper-run";
               inherit (tests) nodes;
-              testScript = tests.test-cargo-reaper-run {
+              testScript = tests.test-cargo-reaper-run rec {
+                plugin_source = testFileset ./tests/plugin_manifests/package_manifest;
+                plugin_vendor = craneLib.vendorCargoDeps { src = plugin_source; };
+                plugin_name = "reaper_package_ext";
+              };
+            };
+          test-cargo-reaper-clean =
+            let
+              tests = import ./tests {
+                inherit pkgs;
+                inherit (self.packages.${system}) cargo-reaper;
+              };
+            in
+            pkgs.nixosTest {
+              name = "test-cargo-reaper-clean";
+              inherit (tests) nodes;
+              testScript = tests.test-cargo-reaper-clean {
+                plugin = test-cargo-reaper-build-package-manifest;
                 plugin_source = testFileset ./tests/plugin_manifests/package_manifest;
                 plugin_name = "reaper_package_ext";
               };
             };
-          # test-cargo-reaper-clean = {};
         };
 
       # These checks require `--option sandbox false`.

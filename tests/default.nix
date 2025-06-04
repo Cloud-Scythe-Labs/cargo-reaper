@@ -1,4 +1,8 @@
-{ pkgs, imports ? [ ], cargo-reaper, ... }:
+{ pkgs
+, imports ? [ ]
+, cargo-reaper
+, ...
+}:
 let
   # REAPER doesn't like to execute in the background, and NixOS Test invokes commands
   # as root. To combat this, we change users based on machine before launching REAPER,
@@ -33,9 +37,18 @@ let
     }:
     pkgs.writeShellScriptBin "cargo_reaper_dry_run" ''
       function run_cargo_reaper() {
-          su - ${user} -c '${cargo-reaper}/bin/cargo-reaper run &'
-          export reaper_pid=$!
+          su - ${user} -c '${cargo-reaper}/bin/cargo-reaper run --release --offline &'
           sleep 5
+
+          # In this case reaper is running as a subprocess of `cargo-reaper run`
+          # so we must find the process id manually in order to terminate it.
+          reaper_pid=$(pgrep -u ${user} -f 'reaper')
+          if [[ -z "$reaper_pid" ]]; then
+              echo "REAPER process not found!"
+              exit 1
+          fi
+          echo "REAPER is running with PID $reaper_pid"
+
           error_window=$(${xdotool}/bin/xdotool search --name "$1")
           if [[ -n "$error_window" ]]; then
               echo "found error window with ID: $error_window"
@@ -70,6 +83,7 @@ in
           };
         };
 
+        # Enable audio via pipewire.
         services.pulseaudio.enable = false;
         security.rtkit.enable = true;
         services.pipewire = {
@@ -98,6 +112,8 @@ in
       };
   };
 
+  # Link the pre-built plugin using `cargo-reaper link` and
+  # assert the symbolic link exists in the `UserPlugins` directory.
   test-cargo-reaper-link = { plugin, plugin_name }: ''
     ferris.start()
     ferris.wait_for_unit("multi-user.target")
@@ -106,11 +122,29 @@ in
     ferris.succeed("su - ferris -c 'test -e ~/.config/REAPER/UserPlugins/${plugin_name}.*'")
   '';
 
-  test-cargo-reaper-run = { plugin_source, plugin_name }: ''
+  # Copy plugin source code and its pre-vendored dependencies into
+  # a directory and run `cargo-reaper run` in offline mode.
+  test-cargo-reaper-run = { plugin_source, plugin_vendor, plugin_name }: ''
     ferris.start()
     ferris.wait_for_unit("multi-user.target")
     ferris.succeed("reaper_dry_run \"${plugin_name} error\"")
-    ferris.succeed("su - root -c 'cp -r ${plugin_source}/* /home/ferris/ && chmod -R 755 /home/ferris/'")
+    ferris.succeed("su - root -c 'cp -r ${plugin_source}/* /home/ferris/'")
+    ferris.succeed("su - root -c 'mkdir -p /home/ferris/.cargo && cp -r ${plugin_vendor}/config.toml /home/ferris/.cargo/'")
     ferris.succeed("cargo_reaper_dry_run \"${plugin_name} error\"")
+  '';
+
+  # Link the pre-built plugin using `cargo-reaper link` and
+  # assert the symbolic link exists in the `UserPlugins` directory.
+  # Copy plugin source code into a directory and run `cargo-reaper clean`,
+  # then assert the plugin link no longer exists in the `UserPlugins` directory.
+  test-cargo-reaper-clean = { plugin, plugin_source, plugin_name }: ''
+    ferris.start()
+    ferris.wait_for_unit("multi-user.target")
+    ferris.succeed("reaper_dry_run \"${plugin_name} error\"")
+    ferris.succeed("su - ferris -c '${cargo-reaper}/bin/cargo-reaper link ${plugin}/lib/${plugin_name}.*'")
+    ferris.succeed("su - ferris -c 'test -e ~/.config/REAPER/UserPlugins/${plugin_name}.*'")
+    ferris.succeed("su - root -c 'cp -r ${plugin_source}/* /home/ferris/'")
+    ferris.succeed("su - ferris -c '${cargo-reaper}/bin/cargo-reaper clean -p ${plugin_name}'")
+    ferris.fail("su - ferris -c 'test -e ~/.config/REAPER/UserPlugins/${plugin_name}.*'")
   '';
 }
