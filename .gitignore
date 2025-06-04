@@ -1,3 +1,4 @@
 /target
 result*
 docs/book
+.nixos-test-history

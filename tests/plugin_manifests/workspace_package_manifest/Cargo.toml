@@ -1,5 +1,12 @@
+[workspace.metadata.crane]
+name = "workspace_package_manifest"
+
+[workspace]
+resolver = "2"
+members = []
+
 [package]
-name = "package_extension"
+name = "workspace_package_manifest"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,5 +17,5 @@ reaper-macros = { git = "https://github.com/helgoboss/reaper-rs.git", branch = "
 reaper-medium = { git = "https://github.com/helgoboss/reaper-rs.git", branch = "master" }
 
 [lib]
-name = "_package_extension"
+name = "_workspace_package_extension"
 crate-type = ["cdylib"]

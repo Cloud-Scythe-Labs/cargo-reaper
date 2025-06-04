@@ -1,5 +1,8 @@
+[workspace.metadata.crane]
+name = "workspace_manifest"
+
 [workspace.package]
-name = "workspace_manifest_complex"
+name = "workspace_manifest"
 version = "0.1.0"
 edition = "2021"
 
