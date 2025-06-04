@@ -17,13 +17,9 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
-        with:
-          extra-conf: |
-            extra-substituters = https://cloud-scythe-labs.cachix.org
-            extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
 
       - name: Build Docs
-        run: nix develop -c mdbook build docs
+        run: nix-shell -p mdbook --run "mdbook build docs"
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
