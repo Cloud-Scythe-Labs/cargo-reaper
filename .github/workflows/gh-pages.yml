@@ -25,6 +25,11 @@ jobs:
       - name: Build Docs
         run: nix develop -c mdbook build docs
 
+      - name: Copy favicons
+        run: |
+          cp assets/rea-corro.svg docs/book/favicon.svg
+          cp assets/favicon.png docs/book/favicon.png
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
