@@ -125,6 +125,10 @@
             (individualCrateArgs // {
               inherit cargoArtifacts;
             });
+          test-cargo-reaper-build-package-manifest = buildReaperExtension (packageManifestTestArgs // {
+            package = "package_manifest";
+            plugin = "reaper_package_ext";
+          });
 
           workspaceManifestTestArgs =
             let
@@ -136,6 +140,10 @@
             (individualCrateArgs // {
               inherit cargoArtifacts;
             });
+          test-cargo-reaper-build-workspace-manifest = buildReaperExtension (workspaceManifestTestArgs // {
+            package = "extension_0";
+            plugin = "reaper_ext_0";
+          });
 
           workspacePackageManifestTestArgs =
             let
@@ -147,10 +155,19 @@
             (individualCrateArgs // {
               inherit cargoArtifacts;
             });
+          test-cargo-reaper-build-workspace-package-manifest = buildReaperExtension (workspacePackageManifestTestArgs // {
+            package = "workspace_package_manifest";
+            plugin = "reaper_workspace_package_ext";
+          });
         in
         {
           # Build the crate as part of `nix flake check` for convenience
-          inherit cargo-reaper-drv;
+          inherit
+            cargo-reaper-drv
+            test-cargo-reaper-build-package-manifest
+            test-cargo-reaper-build-workspace-manifest
+            test-cargo-reaper-build-workspace-package-manifest
+            ;
 
           # Run clippy (and deny all warnings) on the crate source,
           # again, reusing the dependency artifacts from above.
@@ -192,19 +209,6 @@
             partitions = 1;
             partitionType = "count";
             cargoNextestPartitionsExtraArgs = "--no-tests=warn";
-          });
-
-          test-cargo-reaper-build-package-manifest = buildReaperExtension (packageManifestTestArgs // {
-            package = "package_manifest";
-            plugin = "reaper_package_ext";
-          });
-          test-cargo-reaper-build-workspace-manifest = buildReaperExtension (workspaceManifestTestArgs // {
-            package = "extension_0";
-            plugin = "reaper_ext_0";
-          });
-          test-cargo-reaper-build-workspace-package-manifest = buildReaperExtension (workspacePackageManifestTestArgs // {
-            package = "workspace_package_manifest";
-            plugin = "reaper_workspace_package_ext";
           });
 
           test-cargo-reaper-list-package-manifest = pkgs.stdenv.mkDerivation {
@@ -261,6 +265,38 @@
               mkdir -p $out
             '';
           };
+        } // lib.optionalAttrs pkgs.stdenv.isLinux {
+          test-cargo-reaper-link =
+            let
+              tests = import ./tests {
+                inherit pkgs;
+                inherit (self.packages.${system}) cargo-reaper;
+              };
+            in
+            pkgs.nixosTest {
+              name = "test-cargo-reaper-link";
+              inherit (tests) nodes;
+              testScript = tests.test-cargo-reaper-link {
+                plugin = test-cargo-reaper-build-package-manifest;
+                plugin_name = "reaper_package_ext";
+              };
+            };
+          test-cargo-reaper-run =
+            let
+              tests = import ./tests {
+                inherit pkgs;
+                inherit (self.packages.${system}) cargo-reaper;
+              };
+            in
+            pkgs.nixosTest {
+              name = "test-cargo-reaper-run";
+              inherit (tests) nodes;
+              testScript = tests.test-cargo-reaper-run {
+                plugin_source = testFileset ./tests/plugin_manifests/package_manifest;
+                plugin_name = "reaper_package_ext";
+              };
+            };
+          # test-cargo-reaper-clean = {};
         };
 
       # These checks require `--option sandbox false`.
@@ -321,6 +357,7 @@
           nixpkgs-fmt
           mdbook
           self.packages.${system}.default
+          reaper
         ];
       };
 
