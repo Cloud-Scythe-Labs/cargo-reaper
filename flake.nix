@@ -54,7 +54,7 @@
           craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
         in
         craneLib // (cargoReaper.crane {
-          inherit (craneLib) buildPackage;
+          inherit craneLib;
         });
       src = craneLib.cleanCargoSource ./.;
 

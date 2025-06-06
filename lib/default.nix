@@ -9,17 +9,10 @@ in
 
   # Extend the functionality of the crane library for building REAPER extension plugins.
   crane =
-    { buildPackage ? builtins.throw ''
-        expected a `buildPackage` function from the `crane` library as input: https://crane.dev/API.html#cranelibbuildpackage
+    { craneLib ? ''
+        Requires `craneLib` from the `crane` library: https://crane.dev/API.html#cranelib
 
-        The `crane` attribute extends the functionality of the crane library for building REAPER extension plugins.
-        `crane :: set -> set`
-
-        Its main function is `buildReaperExtension` which supplies crane's `buildPackage`
-        with the default arguments necessary to build a REAPER extension plugin.
-        `buildReaperExtension :: (set -> drv) -> drv`
-
-        Example `flake.nix`:
+        Example:
         ```
         {
           inputs = {
@@ -40,7 +33,7 @@ in
                   };
                 in
                 craneLib // (cargoReaper.crane {
-                  inherit (craneLib) buildPackage;
+                  inherit craneLib;
                 });
               crateArgs = { /* Args for your crate */ };
             in
@@ -54,10 +47,10 @@ in
         ```
       ''
     }: {
-      inherit fileset;
+      fileset = (craneLib.fileset or { }) // fileset;
 
       buildReaperExtension = { package, plugin ? package, ... }@crateArgs:
-        buildPackage (crateArgs // {
+        craneLib.buildPackage (crateArgs // {
           pname = package;
           nativeBuildInputs = (crateArgs.nativeBuildInputs or [ ]) ++ [
             # Add `cargo-reaper` as a build time dependency of this derivation.
