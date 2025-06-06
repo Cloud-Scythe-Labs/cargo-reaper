@@ -12,12 +12,6 @@
       inputs.rust-analyzer-src.follows = "";
     };
 
-    nix-core = {
-      url = "github:Cloud-Scythe-Labs/nix-core";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.fenix.follows = "fenix";
-    };
-
     flake-utils.url = "github:numtide/flake-utils";
 
     advisory-db = {
@@ -31,11 +25,13 @@
     , nixpkgs
     , crane
     , fenix
-    , nix-core
     , flake-utils
     , advisory-db
     , ...
     }:
+
+    { mkLib = import ./lib; } //
+
     flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = import nixpkgs {
@@ -44,11 +40,22 @@
       };
 
       inherit (pkgs) lib;
+      cargoReaper = self.mkLib {
+        inherit lib;
+        inherit (self.packages.${system}) cargo-reaper;
+      };
 
-      rustToolchain = nix-core.toolchains.${system}.mkRustToolchainFromTOML
-        ./.rust-toolchain.toml
-        "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
-      craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain.fenix-pkgs;
+      rustToolchain = fenix.packages.${system}.fromToolchainFile {
+        file = ./.rust-toolchain.toml;
+        sha256 = "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
+      };
+      craneLib =
+        let
+          craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+        in
+        craneLib // (cargoReaper.crane {
+          inherit (craneLib) buildPackage;
+        });
       src = craneLib.cleanCargoSource ./.;
 
       # Common arguments can be set here to avoid repeating them later
@@ -56,8 +63,8 @@
         inherit src;
         strictDeps = true;
 
-        buildInputs = [
-          rustToolchain.darwin-pkgs
+        buildInputs = lib.optionals pkgs.stdenv.isDarwin [
+          pkgs.libiconv
         ];
       };
 
@@ -75,31 +82,7 @@
     {
       checks =
         let
-          buildReaperExtension = { package, plugin ? package, ... }@crateArgs:
-            craneLib.buildPackage (crateArgs // {
-              pname = package;
-              nativeBuildInputs = (crateArgs.nativeBuildInputs or [ ]) ++ [
-                # Add `cargo-reaper` as a build time dependency of this derivation.
-                self.packages.${system}.default
-              ];
-              # Run `cargo-reaper`, passing trailing args to the cargo invocation.
-              # We do not symlink the plugin since the `UserPlugins` directory is in
-              # the `$HOME` directory which is inaccessible to the sandbox.
-              buildPhaseCargoCommand = ''
-                ls .
-                cargo reaper build --no-symlink \
-                  -p ${package} --lib \
-                  --release
-              '';
-              # Include extension plugin in the build result.
-              installPhaseCommand = ''
-                mkdir -p $out/lib
-                mv target/release/${plugin}.* $out/lib
-              '';
-              # Bypass crane checks for target install paths.
-              doNotPostBuildInstallCargoBinaries = true;
-            });
-          cargoReaperConfigFilter = from: lib.fileset.fileFilter (file: (builtins.match "\.?reaper\.toml" file.name) != null) from;
+          mkTestScripts = cargoReaper.scripts { inherit (pkgs) writeShellScriptBin; };
           commonTestArgs = src: {
             inherit src;
             strictDeps = true;
@@ -111,7 +94,7 @@
               (root + "/Cargo.toml")
               (root + "/Cargo.lock")
               (root + "/src")
-              (cargoReaperConfigFilter (root + "/reaper.toml"))
+              (craneLib.fileset.cargoReaperConfigFilter (root + "/reaper.toml"))
             ];
           };
 
@@ -125,7 +108,7 @@
             (individualCrateArgs // {
               inherit cargoArtifacts;
             });
-          test-cargo-reaper-build-package-manifest = buildReaperExtension (packageManifestTestArgs // {
+          test-cargo-reaper-build-package-manifest = craneLib.buildReaperExtension (packageManifestTestArgs // {
             package = "package_manifest";
             plugin = "reaper_package_ext";
           });
@@ -140,7 +123,7 @@
             (individualCrateArgs // {
               inherit cargoArtifacts;
             });
-          test-cargo-reaper-build-workspace-manifest = buildReaperExtension (workspaceManifestTestArgs // {
+          test-cargo-reaper-build-workspace-manifest = craneLib.buildReaperExtension (workspaceManifestTestArgs // {
             package = "extension_0";
             plugin = "reaper_ext_0";
           });
@@ -155,7 +138,7 @@
             (individualCrateArgs // {
               inherit cargoArtifacts;
             });
-          test-cargo-reaper-build-workspace-package-manifest = buildReaperExtension (workspacePackageManifestTestArgs // {
+          test-cargo-reaper-build-workspace-package-manifest = craneLib.buildReaperExtension (workspacePackageManifestTestArgs // {
             package = "workspace_package_manifest";
             plugin = "reaper_workspace_package_ext";
           });
@@ -271,6 +254,7 @@
               tests = import ./tests {
                 inherit pkgs;
                 inherit (self.packages.${system}) cargo-reaper;
+                inherit (mkTestScripts) mkReaperDryRun mkCargoReaperDryRun;
               };
             in
             pkgs.nixosTest {
@@ -286,10 +270,11 @@
               tests = import ./tests {
                 inherit pkgs;
                 inherit (self.packages.${system}) cargo-reaper;
+                inherit (mkTestScripts) mkReaperDryRun mkCargoReaperDryRun;
                 imports = [
                   {
                     environment.systemPackages = [
-                      rustToolchain.fenix-pkgs
+                      rustToolchain
                       pkgs.gcc
                     ];
                   }
@@ -310,6 +295,7 @@
               tests = import ./tests {
                 inherit pkgs;
                 inherit (self.packages.${system}) cargo-reaper;
+                inherit (mkTestScripts) mkReaperDryRun mkCargoReaperDryRun;
               };
             in
             pkgs.nixosTest {
