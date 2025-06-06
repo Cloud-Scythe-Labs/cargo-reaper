@@ -34,7 +34,7 @@ in
               craneLib =
                 let
                   craneLib = inputs.crane.mkLib pkgs;
-                  cargoReaper = inputs.cargo-reaper.lib {
+                  cargoReaper = inputs.cargo-reaper.mkLib {
                     inherit (pkgs) lib;
                     inherit (inputs.cargo-reaper.packages.''${system}) cargo-reaper;
                   };

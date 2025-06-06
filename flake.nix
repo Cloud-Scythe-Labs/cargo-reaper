@@ -12,12 +12,6 @@
       inputs.rust-analyzer-src.follows = "";
     };
 
-    nix-core = {
-      url = "github:Cloud-Scythe-Labs/nix-core";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.fenix.follows = "fenix";
-    };
-
     flake-utils.url = "github:numtide/flake-utils";
 
     advisory-db = {
@@ -31,11 +25,13 @@
     , nixpkgs
     , crane
     , fenix
-    , nix-core
     , flake-utils
     , advisory-db
     , ...
     }:
+
+    { mkLib = import ./lib; } //
+
     flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = import nixpkgs {
@@ -44,17 +40,18 @@
       };
 
       inherit (pkgs) lib;
-      cargoReaper = import ./lib {
+      cargoReaper = self.mkLib {
         inherit lib;
         inherit (self.packages.${system}) cargo-reaper;
       };
 
-      rustToolchain = nix-core.toolchains.${system}.mkRustToolchainFromTOML
-        ./.rust-toolchain.toml
-        "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
+      rustToolchain = fenix.packages.${system}.fromToolchainFile {
+        file = ./.rust-toolchain.toml;
+        sha256 = "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
+      };
       craneLib =
         let
-          craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain.fenix-pkgs;
+          craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
         in
         craneLib // (cargoReaper.crane {
           inherit (craneLib) buildPackage;
@@ -66,8 +63,8 @@
         inherit src;
         strictDeps = true;
 
-        buildInputs = [
-          rustToolchain.darwin-pkgs
+        buildInputs = lib.optionals pkgs.stdenv.isDarwin [
+          pkgs.libiconv
         ];
       };
 
@@ -277,7 +274,7 @@
                 imports = [
                   {
                     environment.systemPackages = [
-                      rustToolchain.fenix-pkgs
+                      rustToolchain
                       pkgs.gcc
                     ];
                   }
