@@ -118,7 +118,7 @@ pub enum CargoReaperCommand {
             trailing_var_arg = true,
             num_args = 0..,
             value_name = "CARGO_BUILD_ARGS",
-            conflicts_with = "skip_build_phase"
+            conflicts_with = "no_build"
         )]
         args: Vec<String>,
     },
