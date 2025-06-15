@@ -1,6 +1,9 @@
 use std::{io, path, process, thread, time};
 
-use crate::util::{self, BINARY_NAME, Colorize};
+use crate::{
+    cli,
+    util::{self, BINARY_NAME, Colorize},
+};
 
 /// Launch the REAPER binary application. The current working directory takes priority,
 /// but if the binary file is not on `$PATH`, the global default location will be used.
@@ -14,6 +17,9 @@ pub(crate) fn run(
     override_binary: Option<path::PathBuf>,
     project: Option<path::PathBuf>,
     timeout: Option<time::Duration>,
+    stdin: cli::Stdio,
+    stdout: cli::Stdio,
+    stderr: cli::Stdio,
 ) -> anyhow::Result<()> {
     override_binary
         .inspect(|reaper| {
@@ -25,7 +31,7 @@ pub(crate) fn run(
         })
         .or_else(|| which::which(BINARY_NAME).ok())
         .map_or_else(
-            || run_global_default(project.as_ref(), timeout.as_ref()),
+            || run_global_default(project.as_ref(), timeout.as_ref(), stdin, stdout, stderr),
             |reaper| {
                 println!(
                     "     {} REAPER executable ({})",
@@ -34,10 +40,25 @@ pub(crate) fn run(
                 );
 
                 timeout.map_or_else(
-                    || run_reaper(&reaper, project.as_ref())?.wait(),
+                    || {
+                        run_reaper(
+                            &reaper,
+                            project.as_ref(),
+                            stdin.into(),
+                            stdout.into(),
+                            stderr.into(),
+                        )?
+                        .wait()
+                    },
                     |timeout| {
-                        let (mut reaper, start) = run_reaper(&reaper, project.as_ref())
-                            .map(|reaper| (reaper, time::Instant::now()))?;
+                        let (mut reaper, start) = run_reaper(
+                            &reaper,
+                            project.as_ref(),
+                            stdin.into(),
+                            stdout.into(),
+                            stderr.into(),
+                        )
+                        .map(|reaper| (reaper, time::Instant::now()))?;
 
                         loop {
                             match reaper.try_wait()? {
@@ -58,6 +79,7 @@ pub(crate) fn run(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 #[cfg(target_os = "linux")]
 pub(crate) fn run_headless(
     override_binary: Option<path::PathBuf>,
@@ -65,6 +87,9 @@ pub(crate) fn run_headless(
     display: String,
     window_title: Option<String>,
     timeout: Option<time::Duration>,
+    stdin: cli::Stdio,
+    stdout: cli::Stdio,
+    stderr: cli::Stdio,
 ) -> anyhow::Result<()> {
     override_binary
         .inspect(|reaper| {
@@ -82,6 +107,9 @@ pub(crate) fn run_headless(
                     &display,
                     window_title.as_deref(),
                     timeout.as_ref(),
+                    stdin,
+                    stdout,
+                    stderr,
                 )
             },
             |reaper| {
@@ -92,11 +120,27 @@ pub(crate) fn run_headless(
                 );
 
                 timeout.map_or_else(
-                    || run_reaper_headless(&reaper, project.as_ref(), &display)?.wait(),
+                    || {
+                        run_reaper_headless(
+                            &reaper,
+                            project.as_ref(),
+                            &display,
+                            stdin,
+                            stdout,
+                            stderr,
+                        )
+                        .and_then(|(mut xvfb, mut reaper)| reaper.wait().and_then(|_| xvfb.wait()))
+                    },
                     |timeout| {
-                        let (mut reaper, start) =
-                            run_reaper_headless(&reaper, project.as_ref(), &display)
-                                .map(|reaper| (reaper, time::Instant::now()))?;
+                        let ((mut xvfb, mut reaper), start) = run_reaper_headless(
+                            &reaper,
+                            project.as_ref(),
+                            &display,
+                            stdin,
+                            stdout,
+                            stderr,
+                        )
+                        .map(|(xvfb, reaper)| ((xvfb, reaper), time::Instant::now()))?;
 
                         loop {
                             if let Some(window_title) = &window_title {
@@ -110,21 +154,34 @@ pub(crate) fn run_headless(
                                     .map(|output| output.status.success())
                                     .unwrap_or(false)
                                 {
-                                    reaper.kill()?;
-                                    reaper.wait()?;
+                                    reaper
+                                        .kill()
+                                        .and_then(|_| reaper.wait())
+                                        .and_then(|_| xvfb.kill())
+                                        .and_then(|_| xvfb.wait())?;
                                     process::exit(0);
                                 }
                             }
                             match reaper.try_wait()? {
-                                Some(_) if window_title.is_some() => process::exit(1),
+                                Some(_) if window_title.is_some() => {
+                                    reaper
+                                        .kill()
+                                        .and_then(|_| reaper.wait())
+                                        .and_then(|_| xvfb.kill())
+                                        .and_then(|_| xvfb.wait())?;
+                                    process::exit(1)
+                                }
                                 Some(status) => break Ok(status),
                                 None if start.elapsed() >= timeout => {
-                                    reaper.kill()?;
-                                    let status = reaper.wait();
+                                    reaper
+                                        .kill()
+                                        .and_then(|_| reaper.wait())
+                                        .and_then(|_| xvfb.kill())
+                                        .and_then(|_| xvfb.wait())?;
                                     if window_title.is_some() {
                                         process::exit(1);
                                     }
-                                    break status;
+                                    process::exit(0);
                                 }
                                 None => thread::sleep(time::Duration::from_secs(1)),
                             }
@@ -142,6 +199,9 @@ pub(crate) fn run_headless(
 fn run_global_default(
     project: Option<&path::PathBuf>,
     timeout: Option<&time::Duration>,
+    stdin: cli::Stdio,
+    stdout: cli::Stdio,
+    stderr: cli::Stdio,
 ) -> io::Result<process::ExitStatus> {
     util::os::locate_global_default().and_then(|reaper| {
         println!(
@@ -151,10 +211,11 @@ fn run_global_default(
         );
 
         timeout.map_or_else(
-            || run_reaper(&reaper, project)?.wait(),
+            || run_reaper(&reaper, project, stdin.into(), stdout.into(), stderr.into())?.wait(),
             |timeout| {
                 let (mut reaper, start) =
-                    run_reaper(&reaper, project).map(|reaper| (reaper, time::Instant::now()))?;
+                    run_reaper(&reaper, project, stdin.into(), stdout.into(), stderr.into())
+                        .map(|reaper| (reaper, time::Instant::now()))?;
 
                 loop {
                     match reaper.try_wait()? {
@@ -177,6 +238,9 @@ fn run_global_default_headless(
     display: &str,
     window_title: Option<&str>,
     timeout: Option<&time::Duration>,
+    stdin: cli::Stdio,
+    stdout: cli::Stdio,
+    stderr: cli::Stdio,
 ) -> io::Result<process::ExitStatus> {
     util::os::locate_global_default().and_then(|reaper| {
         println!(
@@ -186,10 +250,14 @@ fn run_global_default_headless(
         );
 
         timeout.map_or_else(
-            || run_reaper_headless(&reaper, project, display)?.wait(),
+            || {
+                run_reaper_headless(&reaper, project, display, stdin, stdout, stderr)
+                    .and_then(|(mut xvfb, mut reaper)| reaper.wait().and_then(|_| xvfb.wait()))
+            },
             |timeout| {
-                let (mut reaper, start) = run_reaper_headless(&reaper, project, display)
-                    .map(|reaper| (reaper, time::Instant::now()))?;
+                let ((mut xvfb, mut reaper), start) =
+                    run_reaper_headless(&reaper, project, display, stdin, stdout, stderr)
+                        .map(|(xvfb, reaper)| ((xvfb, reaper), time::Instant::now()))?;
 
                 loop {
                     if let Some(window_title) = &window_title {
@@ -203,21 +271,34 @@ fn run_global_default_headless(
                             .map(|output| output.status.success())
                             .unwrap_or(false)
                         {
-                            reaper.kill()?;
-                            reaper.wait()?;
+                            reaper
+                                .kill()
+                                .and_then(|_| reaper.wait())
+                                .and_then(|_| xvfb.kill())
+                                .and_then(|_| xvfb.wait())?;
                             process::exit(0);
                         }
                     }
                     match reaper.try_wait()? {
-                        Some(_) if window_title.is_some() => process::exit(1),
+                        Some(_) if window_title.is_some() => {
+                            reaper
+                                .kill()
+                                .and_then(|_| reaper.wait())
+                                .and_then(|_| xvfb.kill())
+                                .and_then(|_| xvfb.wait())?;
+                            process::exit(1)
+                        }
                         Some(status) => break Ok(status),
                         None if start.elapsed() >= *timeout => {
-                            reaper.kill()?;
-                            let status = reaper.wait();
+                            reaper
+                                .kill()
+                                .and_then(|_| reaper.wait())
+                                .and_then(|_| xvfb.kill())
+                                .and_then(|_| xvfb.wait())?;
                             if window_title.is_some() {
                                 process::exit(1);
                             }
-                            break status;
+                            process::exit(0);
                         }
                         None => thread::sleep(time::Duration::from_secs(1)),
                     }
@@ -230,12 +311,15 @@ fn run_global_default_headless(
 fn run_reaper(
     reaper: &path::PathBuf,
     project: Option<&path::PathBuf>,
+    stdin: process::Stdio,
+    stdout: process::Stdio,
+    stderr: process::Stdio,
 ) -> io::Result<process::Child> {
     process::Command::new(reaper)
         .args(project.iter())
-        .stdin(process::Stdio::inherit())
-        .stdout(process::Stdio::inherit())
-        .stderr(process::Stdio::inherit())
+        .stdin(stdin)
+        .stdout(stdout)
+        .stderr(stderr)
         .spawn()
 }
 
@@ -244,17 +328,31 @@ fn run_reaper_headless(
     reaper: &path::PathBuf,
     project: Option<&path::PathBuf>,
     display: &str,
-) -> io::Result<process::Child> {
-    const XVFB_RUN: &str = "xvfb-run";
-    const XVFB_RUN_ARGS: &[&str; 1] = &["-a"];
+    stdin: cli::Stdio,
+    stdout: cli::Stdio,
+    stderr: cli::Stdio,
+) -> io::Result<(process::Child, process::Child)> {
+    const XVFB: &str = "Xvfb";
+    const XVFB_ARGS: &[&str; 5] = &["-screen", "0", "1024x768x24", "-nolisten", "tcp"];
 
-    process::Command::new(XVFB_RUN)
-        .args(XVFB_RUN_ARGS)
-        .arg(reaper)
-        .args(project.iter())
+    process::Command::new(XVFB)
+        .arg(display)
+        .args(XVFB_ARGS)
         .env("DISPLAY", display)
-        .stdin(process::Stdio::inherit())
-        .stdout(process::Stdio::inherit())
-        .stderr(process::Stdio::inherit())
+        .stdin(stdin)
+        .stdout(stdout)
+        .stderr(stderr)
         .spawn()
+        .and_then(|xvfb| {
+            Ok((
+                xvfb,
+                process::Command::new(reaper)
+                    .args(project.iter())
+                    .env("DISPLAY", display)
+                    .stdin(stdin)
+                    .stdout(stdout)
+                    .stderr(stderr)
+                    .spawn()?,
+            ))
+        })
 }

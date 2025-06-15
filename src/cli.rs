@@ -1,7 +1,7 @@
-use std::{path, time};
+use std::{path, process, time};
 
 pub(crate) use clap::{CommandFactory, FromArgMatches};
-use clap::{Parser, ValueHint};
+use clap::{Parser, ValueEnum, ValueHint};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -112,6 +112,18 @@ pub enum CargoReaperCommand {
         )]
         timeout: Option<time::Duration>,
 
+        /// Configuration for the child process’s standard input (stdin) handle.
+        #[arg(long, value_name = "STDIO", default_value = "null")]
+        stdin: Stdio,
+
+        /// Configuration for the child process’s standard output (stdout) handle.
+        #[arg(long, value_name = "STDIO", default_value = "inherit")]
+        stdout: Stdio,
+
+        /// Configuration for the child process’s standard error (stderr) handle.
+        #[arg(long, value_name = "STDIO", default_value = "inherit")]
+        stderr: Stdio,
+
         /// Arguments to forward to the `cargo build` invocation.
         #[arg(
             allow_hyphen_values = true,
@@ -137,4 +149,20 @@ pub enum CargoReaperCommand {
         #[arg(long, short = 'a', default_value = "false")]
         remove_artifacts: bool,
     },
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub(crate) enum Stdio {
+    Piped,
+    Inherit,
+    Null,
+}
+impl From<Stdio> for process::Stdio {
+    fn from(value: Stdio) -> Self {
+        match value {
+            Stdio::Piped => process::Stdio::piped(),
+            Stdio::Inherit => process::Stdio::inherit(),
+            Stdio::Null => process::Stdio::null(),
+        }
+    }
 }

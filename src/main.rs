@@ -46,22 +46,39 @@ async fn main() -> anyhow::Result<()> {
             display,
             window_title,
             timeout,
+            stdin,
+            stdout,
+            stderr,
             args,
         } if headless => (!no_build)
             .then(|| build(false, args))
             .transpose()
-            .and_then(|_| run_headless(reaper, project, display, window_title, timeout)),
+            .and_then(|_| {
+                run_headless(
+                    reaper,
+                    project,
+                    display,
+                    window_title,
+                    timeout,
+                    stdin,
+                    stdout,
+                    stderr,
+                )
+            }),
         CargoReaperCommand::Run {
             reaper,
             project,
             no_build,
             timeout,
+            stdin,
+            stdout,
+            stderr,
             args,
             ..
         } => (!no_build)
             .then(|| build(false, args))
             .transpose()
-            .and_then(|_| run(reaper, project, timeout)),
+            .and_then(|_| run(reaper, project, timeout, stdin, stdout, stderr)),
         CargoReaperCommand::Clean {
             plugins,
             dry_run,
