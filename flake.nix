@@ -63,8 +63,14 @@
         inherit src;
         strictDeps = true;
 
-        buildInputs = lib.optionals pkgs.stdenv.isDarwin [
-          pkgs.libiconv
+        nativeBuildInputs = with pkgs; lib.optionals stdenv.isLinux [
+          autoPatchelfHook
+        ];
+
+        buildInputs = with pkgs; [
+          libgcc
+        ] ++ lib.optionals stdenv.isDarwin [
+          libiconv
         ];
       };
 
