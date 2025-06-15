@@ -198,7 +198,7 @@ fn run_global_default_headless(
                         if process::Command::new(XDOTOOL)
                             .args(XDOTOOL_ARGS)
                             .arg(window_title)
-                            .env("DISPLAY", &display)
+                            .env("DISPLAY", display)
                             .output()
                             .map(|output| output.status.success())
                             .unwrap_or(false)

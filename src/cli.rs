@@ -81,7 +81,7 @@ pub enum CargoReaperCommand {
 
         /// Do not build plugin(s) before running REAPER.
         #[arg(long, conflicts_with = "args")]
-        skip_build_phase: bool,
+        no_build: bool,
 
         /// Run REAPER in a headless environment.
         #[cfg(target_os = "linux")]

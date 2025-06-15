@@ -41,24 +41,24 @@ async fn main() -> anyhow::Result<()> {
         CargoReaperCommand::Run {
             reaper,
             project,
-            skip_build_phase,
+            no_build,
             headless,
             display,
             window_title,
             timeout,
             args,
-        } if headless => (!skip_build_phase)
+        } if headless => (!no_build)
             .then(|| build(false, args))
             .transpose()
             .and_then(|_| run_headless(reaper, project, display, window_title, timeout)),
         CargoReaperCommand::Run {
             reaper,
             project,
-            skip_build_phase,
+            no_build,
             timeout,
             args,
             ..
-        } => (!skip_build_phase)
+        } => (!no_build)
             .then(|| build(false, args))
             .transpose()
             .and_then(|_| run(reaper, project, timeout)),
