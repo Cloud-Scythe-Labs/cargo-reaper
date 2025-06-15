@@ -1,4 +1,4 @@
-use std::path;
+use std::{path, time};
 
 pub(crate) use clap::{CommandFactory, FromArgMatches};
 use clap::{Parser, ValueHint};
@@ -61,11 +61,65 @@ pub enum CargoReaperCommand {
         /// Override the REAPER executable file path. By default, the REAPER executable found on
         /// `$PATH` will be used. If the REAPER exectuable can't be found in the current working
         /// directory, the default global installation path will be used instead.
-        #[arg(long, short = 'e', value_name = "REAPER", value_hint = ValueHint::ExecutablePath)]
-        exec: Option<path::PathBuf>,
+        #[arg(
+            long = "exec",
+            short = 'e',
+            value_name = "REAPER",
+            value_hint = ValueHint::ExecutablePath
+        )]
+        reaper: Option<path::PathBuf>,
+
+        /// Open a specific REAPER project file.
+        #[arg(
+            long = "open-project",
+            alias = "open",
+            short = 'o',
+            value_name = "PROJECT",
+            value_hint = ValueHint::FilePath
+        )]
+        project: Option<path::PathBuf>,
+
+        /// Do not build plugin(s) before running REAPER.
+        #[arg(long, conflicts_with = "args")]
+        skip_build_phase: bool,
+
+        /// Run REAPER in a headless environment.
+        #[cfg(target_os = "linux")]
+        #[arg(long)]
+        headless: bool,
+
+        /// The virtual display that should be used for the headless environment.
+        #[cfg(target_os = "linux")]
+        #[arg(long, default_value = ":99", requires = "headless")]
+        display: String,
+
+        /// Locate a window based on its title and exit with status code 0 if found.
+        #[cfg(target_os = "linux")]
+        #[arg(
+            long = "locate-window",
+            short = 'w',
+            value_name = "TITLE",
+            requires = "headless"
+        )]
+        window_title: Option<String>,
+
+        /// The amount of time to wait before closing REAPER, in human-readable format (e.g. 10s, 2m, 1h).
+        #[arg(
+            long,
+            short = 't',
+            value_name = "DURATION",
+            value_parser = humantime::parse_duration
+        )]
+        timeout: Option<time::Duration>,
 
         /// Arguments to forward to the `cargo build` invocation.
-        #[arg(allow_hyphen_values = true, trailing_var_arg = true, num_args = 0.., value_name = "CARGO_BUILD_ARGS")]
+        #[arg(
+            allow_hyphen_values = true,
+            trailing_var_arg = true,
+            num_args = 0..,
+            value_name = "CARGO_BUILD_ARGS",
+            conflicts_with = "skip_build_phase"
+        )]
         args: Vec<String>,
     },
 

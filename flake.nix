@@ -368,6 +368,9 @@
           mdbook
           self.packages.${system}.default
           reaper
+        ] ++ lib.optionals pkgs.stdenv.isLinux [
+          xvfb-run
+          xdotool
         ];
       };
 

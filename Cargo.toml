@@ -16,6 +16,7 @@ codespan-reporting = "0.12"
 colored = "3"
 dirs = "6"
 gix = { version = "0.72", default-features = false }
+humantime = "2.2"
 reqwest = { version = "0.12", default-features = false, features = [
   "blocking",
   "rustls-tls",
