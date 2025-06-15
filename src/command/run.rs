@@ -1,5 +1,13 @@
 use std::{io, path, process, thread, time};
 
+use nix::{
+    sys::signal::{Signal, killpg},
+    unistd::{Pid, setpgid},
+};
+
+#[cfg(target_os = "linux")]
+use std::os::unix::process::CommandExt;
+
 use crate::util::{self, BINARY_NAME, Colorize};
 
 /// Launch the REAPER binary application. The current working directory takes priority,
@@ -43,7 +51,7 @@ pub(crate) fn run(
                             match reaper.try_wait()? {
                                 Some(status) => break Ok(status),
                                 None if start.elapsed() >= timeout => {
-                                    reaper.kill()?;
+                                    kill_process_group(&reaper)?;
                                     break reaper.wait();
                                 }
                                 None => thread::sleep(time::Duration::from_secs(1)),
@@ -102,15 +110,17 @@ pub(crate) fn run_headless(
                             if let Some(window_title) = &window_title {
                                 const XDOTOOL: &str = "xdotool";
                                 const XDOTOOL_ARGS: &[&str; 2] = &["search", "--name"];
-                                if process::Command::new(XDOTOOL)
-                                    .args(XDOTOOL_ARGS)
-                                    .arg(window_title)
-                                    .env("DISPLAY", &display)
-                                    .output()
-                                    .map(|output| output.status.success())
-                                    .unwrap_or(false)
+                                if dbg!(
+                                    process::Command::new(XDOTOOL)
+                                        .args(XDOTOOL_ARGS)
+                                        .arg(window_title)
+                                        .env("DISPLAY", &display)
+                                )
+                                .output()
+                                .map(|output| output.status.success())
+                                .unwrap_or(false)
                                 {
-                                    reaper.kill()?;
+                                    kill_process_group(&reaper)?;
                                     reaper.wait()?;
                                     process::exit(0);
                                 }
@@ -119,7 +129,7 @@ pub(crate) fn run_headless(
                                 Some(_) if window_title.is_some() => process::exit(1),
                                 Some(status) => break Ok(status),
                                 None if start.elapsed() >= timeout => {
-                                    reaper.kill()?;
+                                    kill_process_group(&reaper)?;
                                     let status = reaper.wait();
                                     if window_title.is_some() {
                                         process::exit(1);
@@ -160,7 +170,7 @@ fn run_global_default(
                     match reaper.try_wait()? {
                         Some(status) => break Ok(status),
                         None if start.elapsed() >= *timeout => {
-                            reaper.kill()?;
+                            kill_process_group(&reaper)?;
                             break reaper.wait();
                         }
                         None => thread::sleep(time::Duration::from_secs(1)),
@@ -203,7 +213,7 @@ fn run_global_default_headless(
                             .map(|output| output.status.success())
                             .unwrap_or(false)
                         {
-                            reaper.kill()?;
+                            kill_process_group(&reaper)?;
                             reaper.wait()?;
                             process::exit(0);
                         }
@@ -212,7 +222,7 @@ fn run_global_default_headless(
                         Some(_) if window_title.is_some() => process::exit(1),
                         Some(status) => break Ok(status),
                         None if start.elapsed() >= *timeout => {
-                            reaper.kill()?;
+                            kill_process_group(&reaper)?;
                             let status = reaper.wait();
                             if window_title.is_some() {
                                 process::exit(1);
@@ -248,13 +258,25 @@ fn run_reaper_headless(
     const XVFB_RUN: &str = "xvfb-run";
     const XVFB_RUN_ARGS: &[&str; 1] = &["-a"];
 
-    process::Command::new(XVFB_RUN)
-        .args(XVFB_RUN_ARGS)
-        .arg(reaper)
-        .args(project.iter())
-        .env("DISPLAY", display)
-        .stdin(process::Stdio::inherit())
-        .stdout(process::Stdio::inherit())
-        .stderr(process::Stdio::inherit())
-        .spawn()
+    unsafe {
+        process::Command::new(XVFB_RUN)
+            .args(XVFB_RUN_ARGS)
+            .arg(reaper)
+            .args(project.iter())
+            .env("DISPLAY", display)
+            .pre_exec(|| {
+                setpgid(Pid::from_raw(0), Pid::from_raw(0))
+                    .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+            })
+            .stdin(process::Stdio::inherit())
+            .stdout(process::Stdio::inherit())
+            .stderr(process::Stdio::inherit())
+            .spawn()
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn kill_process_group(child: &process::Child) -> std::io::Result<()> {
+    let pid = Pid::from_raw(child.id() as i32);
+    killpg(pid, Signal::SIGKILL).map_err(|err| io::Error::new(io::ErrorKind::Other, err))
 }
