@@ -1,7 +1,7 @@
-use std::path;
+use std::{path, process, time};
 
 pub(crate) use clap::{CommandFactory, FromArgMatches};
-use clap::{Parser, ValueHint};
+use clap::{Parser, ValueEnum, ValueHint};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -31,8 +31,7 @@ impl CargoReaperArgs {
 
 #[derive(Debug, Clone, clap::Subcommand)]
 pub enum CargoReaperCommand {
-    #[allow(rustdoc::invalid_html_tags)] // rustdoc things <PATH> is an HTML tag...
-    /// Create a new REAPER extension plugin from a template at <PATH>.
+    /// Create a new REAPER extension plugin from a template at `PATH`.
     New { path: path::PathBuf },
 
     /// List available extension plugin(s).
@@ -61,11 +60,82 @@ pub enum CargoReaperCommand {
         /// Override the REAPER executable file path. By default, the REAPER executable found on
         /// `$PATH` will be used. If the REAPER exectuable can't be found in the current working
         /// directory, the default global installation path will be used instead.
-        #[arg(long, short = 'e', value_name = "REAPER", value_hint = ValueHint::ExecutablePath)]
-        exec: Option<path::PathBuf>,
+        #[arg(
+            long = "exec",
+            short = 'e',
+            value_name = "REAPER",
+            value_hint = ValueHint::ExecutablePath
+        )]
+        reaper: Option<path::PathBuf>,
+
+        /// Open a specific REAPER project file.
+        #[arg(
+            long = "open-project",
+            alias = "open",
+            short = 'o',
+            value_name = "PROJECT",
+            value_hint = ValueHint::FilePath
+        )]
+        project: Option<path::PathBuf>,
+
+        /// Do not build plugin(s) before running REAPER.
+        #[arg(long, conflicts_with = "args")]
+        no_build: bool,
+
+        /// Run REAPER in a headless environment.
+        #[cfg(target_os = "linux")]
+        #[arg(long)]
+        headless: bool,
+
+        /// The virtual display that should be used for the headless environment.
+        #[cfg(target_os = "linux")]
+        #[arg(long, short = 'D', env = "DISPLAY", default_value = ":99", requires = "headless")]
+        display: String,
+
+        /// Locate a window based on its title and exit with status code 0 if found.
+        #[cfg(target_os = "linux")]
+        #[arg(
+            long = "locate-window",
+            short = 'w',
+            value_name = "TITLE",
+            requires = "headless"
+        )]
+        window_title: Option<String>,
+
+        /// Continue until the specified timeout, even after a window is located.
+        #[cfg(target_os = "linux")]
+        #[arg(long, requires_all = ["headless", "window_title", "timeout"])]
+        keep_going: bool,
+
+        /// The amount of time to wait before closing REAPER, in human-readable format (e.g. 10s, 2m, 1h).
+        #[arg(
+            long,
+            short = 't',
+            value_name = "DURATION",
+            value_parser = humantime::parse_duration
+        )]
+        timeout: Option<time::Duration>,
+
+        /// Configuration for the child process’s standard input (stdin) handle.
+        #[arg(long, value_name = "STDIO", default_value = "null")]
+        stdin: Stdio,
+
+        /// Configuration for the child process’s standard output (stdout) handle.
+        #[arg(long, value_name = "STDIO", default_value = "inherit")]
+        stdout: Stdio,
+
+        /// Configuration for the child process’s standard error (stderr) handle.
+        #[arg(long, value_name = "STDIO", default_value = "inherit")]
+        stderr: Stdio,
 
         /// Arguments to forward to the `cargo build` invocation.
-        #[arg(allow_hyphen_values = true, trailing_var_arg = true, num_args = 0.., value_name = "CARGO_BUILD_ARGS")]
+        #[arg(
+            allow_hyphen_values = true,
+            trailing_var_arg = true,
+            num_args = 0..,
+            value_name = "CARGO_BUILD_ARGS",
+            conflicts_with = "no_build"
+        )]
         args: Vec<String>,
     },
 
@@ -83,4 +153,20 @@ pub enum CargoReaperCommand {
         #[arg(long, short = 'a', default_value = "false")]
         remove_artifacts: bool,
     },
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub(crate) enum Stdio {
+    Piped,
+    Inherit,
+    Null,
+}
+impl From<Stdio> for process::Stdio {
+    fn from(value: Stdio) -> Self {
+        match value {
+            Stdio::Piped => process::Stdio::piped(),
+            Stdio::Inherit => process::Stdio::inherit(),
+            Stdio::Null => process::Stdio::null(),
+        }
+    }
 }

@@ -1,6 +1,5 @@
 { imports ? [ ]
 , cargo-reaper
-, mkReaperDryRun
 , mkCargoReaperDryRun
 , ...
 }:
@@ -37,16 +36,17 @@
           jack.enable = true;
         };
 
+        # Necessary for Xvfb
+        services.xserver.enable = true;
+        # This can be changed to another DM like xfce if a GUI is needed for debugging
+        services.xserver.displayManager.startx.enable = true;
+
         environment.systemPackages = with pkgs; [
           reaper
           xdotool
           xvfb-run
         ] ++ [
           cargo-reaper
-          (mkReaperDryRun {
-            inherit user;
-            inherit (pkgs) reaper xdotool xvfb-run;
-          })
           (mkCargoReaperDryRun {
             inherit user cargo-reaper;
             inherit (pkgs) xdotool xvfb-run;
@@ -60,7 +60,7 @@
   test-cargo-reaper-link = { plugin, plugin_name }: ''
     corro.start()
     corro.wait_for_unit("multi-user.target")
-    corro.succeed("reaper_dry_run \"${plugin_name} error\"")
+    corro.succeed("su - corro -c '${cargo-reaper}/bin/cargo-reaper run --no-build --headless --timeout 5s --stdout null --stderr null'");
     corro.succeed("su - corro -c '${cargo-reaper}/bin/cargo-reaper link ${plugin}/lib/${plugin_name}.*'")
     corro.succeed("su - corro -c 'test -e ~/.config/REAPER/UserPlugins/${plugin_name}.*'")
   '';
@@ -70,7 +70,7 @@
   test-cargo-reaper-run = { plugin_source, plugin_vendor, plugin_name }: ''
     corro.start()
     corro.wait_for_unit("multi-user.target")
-    corro.succeed("reaper_dry_run \"${plugin_name} error\"")
+    corro.succeed("su - corro -c '${cargo-reaper}/bin/cargo-reaper run --no-build --headless --timeout 5s --stdout null --stderr null'");
     corro.succeed("su - root -c 'cp -r ${plugin_source}/* /home/corro/'")
     corro.succeed("su - root -c 'mkdir -p /home/corro/.cargo && cp -r ${plugin_vendor}/config.toml /home/corro/.cargo/'")
     corro.succeed("cargo_reaper_dry_run \"${plugin_name} error\"")
@@ -83,7 +83,7 @@
   test-cargo-reaper-clean = { plugin, plugin_source, plugin_name }: ''
     corro.start()
     corro.wait_for_unit("multi-user.target")
-    corro.succeed("reaper_dry_run \"${plugin_name} error\"")
+    corro.succeed("su - corro -c '${cargo-reaper}/bin/cargo-reaper run --no-build --headless --timeout 5s --stdout null --stderr null'");
     corro.succeed("su - corro -c '${cargo-reaper}/bin/cargo-reaper link ${plugin}/lib/${plugin_name}.*'")
     corro.succeed("su - corro -c 'test -e ~/.config/REAPER/UserPlugins/${plugin_name}.*'")
     corro.succeed("su - root -c 'cp -r ${plugin_source}/* /home/corro/'")

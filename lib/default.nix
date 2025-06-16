@@ -81,28 +81,6 @@ in
       # REAPER doesn't like to execute in the background, and NixOS Test invokes commands
       # as root. To combat this, we change users based on machine before launching REAPER,
       # using xvfb and xdotool to search for an error window before exiting successfully.
-      mkReaperDryRun =
-        { user
-        , reaper
-        , xdotool
-        , xvfb-run
-        }:
-        writeShellScriptBin "reaper_dry_run" ''
-          function run_reaper() {
-              su - ${user} -c ${reaper}/bin/reaper &
-              export reaper_pid=$!
-              sleep 5
-              error_window=$(${xdotool}/bin/xdotool search --name "$1")
-              if [[ -n "$error_window" ]]; then
-                  echo "found error window with ID: $error_window"
-                  exit 1
-              fi
-              kill $reaper_pid
-          }
-
-          echo "searching for error window title '$1'"
-          ${xvfb-run}/bin/xvfb-run -a sh -c "$(declare -f run_reaper); run_reaper \"\$1\"" _ "$1"
-        '';
       mkCargoReaperDryRun =
         { user
         , cargo-reaper

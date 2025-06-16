@@ -63,8 +63,14 @@
         inherit src;
         strictDeps = true;
 
-        buildInputs = lib.optionals pkgs.stdenv.isDarwin [
-          pkgs.libiconv
+        nativeBuildInputs = with pkgs; lib.optionals stdenv.isLinux [
+          autoPatchelfHook
+        ];
+
+        buildInputs = with pkgs; [
+          libgcc
+        ] ++ lib.optionals stdenv.isDarwin [
+          libiconv
         ];
       };
 
@@ -82,7 +88,7 @@
     {
       checks =
         let
-          mkTestScripts = cargoReaper.scripts { inherit (pkgs) writeShellScriptBin; };
+          scripts = cargoReaper.scripts { inherit (pkgs) writeShellScriptBin; };
           commonTestArgs = src: {
             inherit src;
             strictDeps = true;
@@ -254,7 +260,7 @@
               tests = import ./tests {
                 inherit pkgs;
                 inherit (self.packages.${system}) cargo-reaper;
-                inherit (mkTestScripts) mkReaperDryRun mkCargoReaperDryRun;
+                inherit (scripts) mkCargoReaperDryRun;
               };
             in
             pkgs.nixosTest {
@@ -270,7 +276,7 @@
               tests = import ./tests {
                 inherit pkgs;
                 inherit (self.packages.${system}) cargo-reaper;
-                inherit (mkTestScripts) mkReaperDryRun mkCargoReaperDryRun;
+                inherit (scripts) mkCargoReaperDryRun;
                 imports = [
                   {
                     environment.systemPackages = [
@@ -295,7 +301,7 @@
               tests = import ./tests {
                 inherit pkgs;
                 inherit (self.packages.${system}) cargo-reaper;
-                inherit (mkTestScripts) mkReaperDryRun mkCargoReaperDryRun;
+                inherit (scripts) mkCargoReaperDryRun;
               };
             in
             pkgs.nixosTest {
@@ -368,6 +374,8 @@
           mdbook
           self.packages.${system}.default
           reaper
+        ] ++ lib.optionals pkgs.stdenv.isLinux [
+          xdotool
         ];
       };
 

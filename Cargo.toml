@@ -11,11 +11,12 @@ publish = true
 [dependencies]
 anyhow = "1"
 cargo_toml = "0.22"
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.5", features = ["derive", "env"] }
 codespan-reporting = "0.12"
 colored = "3"
 dirs = "6"
 gix = { version = "0.72", default-features = false }
+humantime = "2.2"
 reqwest = { version = "0.12", default-features = false, features = [
   "blocking",
   "rustls-tls",

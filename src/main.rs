@@ -2,7 +2,9 @@ use std::env;
 
 use crate::{
     cli::{CargoReaperArgs, CargoReaperCommand, CommandFactory, FromArgMatches},
-    command::{build::build, clean::clean, link::link, list::list, new::new, run::run},
+    command::{
+        build::build, clean::clean, link::link, list::list, new::new, run::run, run::run_headless,
+    },
     util::BINARY_NAME,
 };
 
@@ -35,7 +37,50 @@ async fn main() -> anyhow::Result<()> {
         CargoReaperCommand::List => list(),
         CargoReaperCommand::Build { no_symlink, args } => build(no_symlink, args),
         CargoReaperCommand::Link { paths } => link(paths),
-        CargoReaperCommand::Run { exec, args } => build(false, args).and_then(|_| run(exec)),
+        #[cfg(target_os = "linux")]
+        CargoReaperCommand::Run {
+            reaper,
+            project,
+            no_build,
+            headless,
+            display,
+            window_title,
+            keep_going,
+            timeout,
+            stdin,
+            stdout,
+            stderr,
+            args,
+        } if headless => (!no_build)
+            .then(|| build(false, args))
+            .transpose()
+            .and_then(|_| {
+                run_headless(
+                    reaper,
+                    project,
+                    display,
+                    window_title,
+                    keep_going,
+                    timeout,
+                    stdin,
+                    stdout,
+                    stderr,
+                )
+            }),
+        CargoReaperCommand::Run {
+            reaper,
+            project,
+            no_build,
+            timeout,
+            stdin,
+            stdout,
+            stderr,
+            args,
+            ..
+        } => (!no_build)
+            .then(|| build(false, args))
+            .transpose()
+            .and_then(|_| run(reaper, project, timeout, stdin, stdout, stderr)),
         CargoReaperCommand::Clean {
             plugins,
             dry_run,
