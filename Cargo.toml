@@ -11,7 +11,7 @@ publish = true
 [dependencies]
 anyhow = "1"
 cargo_toml = "0.22"
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.5", features = ["derive", "env"] }
 codespan-reporting = "0.12"
 colored = "3"
 dirs = "6"

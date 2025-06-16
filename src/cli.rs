@@ -31,8 +31,7 @@ impl CargoReaperArgs {
 
 #[derive(Debug, Clone, clap::Subcommand)]
 pub enum CargoReaperCommand {
-    #[allow(rustdoc::invalid_html_tags)] // rustdoc things <PATH> is an HTML tag...
-    /// Create a new REAPER extension plugin from a template at <PATH>.
+    /// Create a new REAPER extension plugin from a template at `PATH`.
     New { path: path::PathBuf },
 
     /// List available extension plugin(s).
@@ -90,7 +89,7 @@ pub enum CargoReaperCommand {
 
         /// The virtual display that should be used for the headless environment.
         #[cfg(target_os = "linux")]
-        #[arg(long, default_value = ":99", requires = "headless")]
+        #[arg(long, short = 'D', env = "DISPLAY", default_value = ":99", requires = "headless")]
         display: String,
 
         /// Locate a window based on its title and exit with status code 0 if found.
