@@ -86,6 +86,7 @@ pub(crate) fn run_headless(
     project: Option<path::PathBuf>,
     display: String,
     window_title: Option<String>,
+    keep_going: bool,
     timeout: Option<time::Duration>,
     stdin: cli::Stdio,
     stdout: cli::Stdio,
@@ -106,6 +107,7 @@ pub(crate) fn run_headless(
                     project.as_ref(),
                     &display,
                     window_title.as_deref(),
+                    keep_going,
                     timeout.as_ref(),
                     stdin,
                     stdout,
@@ -142,46 +144,35 @@ pub(crate) fn run_headless(
                         )
                         .map(|(xvfb, reaper)| ((xvfb, reaper), time::Instant::now()))?;
 
+                        let mut exit_code: i32 = 1;
+
                         loop {
                             if let Some(window_title) = &window_title {
                                 const XDOTOOL: &str = "xdotool";
                                 const XDOTOOL_ARGS: &[&str; 2] = &["search", "--name"];
-                                if process::Command::new(XDOTOOL)
-                                    .args(XDOTOOL_ARGS)
-                                    .arg(window_title)
-                                    .env("DISPLAY", &display)
-                                    .output()
-                                    .map(|output| output.status.success())
-                                    .unwrap_or(false)
+                                if exit_code != 0
+                                    && process::Command::new(XDOTOOL)
+                                        .args(XDOTOOL_ARGS)
+                                        .arg(window_title)
+                                        .env("DISPLAY", &display)
+                                        .output()
+                                        .map(|output| output.status.success())
+                                        .unwrap_or(false)
                                 {
-                                    reaper
-                                        .kill()
-                                        .and_then(|_| reaper.wait())
-                                        .and_then(|_| xvfb.kill())
-                                        .and_then(|_| xvfb.wait())?;
-                                    process::exit(0);
+                                    if keep_going {
+                                        exit_code = 0;
+                                    } else {
+                                        kill_and_exit(&mut reaper, &mut xvfb, 0)?;
+                                    }
                                 }
                             }
                             match reaper.try_wait()? {
                                 Some(_) if window_title.is_some() => {
-                                    reaper
-                                        .kill()
-                                        .and_then(|_| reaper.wait())
-                                        .and_then(|_| xvfb.kill())
-                                        .and_then(|_| xvfb.wait())?;
-                                    process::exit(1)
+                                    kill_and_exit(&mut reaper, &mut xvfb, exit_code)?;
                                 }
                                 Some(status) => break Ok(status),
                                 None if start.elapsed() >= timeout => {
-                                    reaper
-                                        .kill()
-                                        .and_then(|_| reaper.wait())
-                                        .and_then(|_| xvfb.kill())
-                                        .and_then(|_| xvfb.wait())?;
-                                    if window_title.is_some() {
-                                        process::exit(1);
-                                    }
-                                    process::exit(0);
+                                    kill_and_exit(&mut reaper, &mut xvfb, exit_code)?;
                                 }
                                 None => thread::sleep(time::Duration::from_secs(1)),
                             }
@@ -232,11 +223,13 @@ fn run_global_default(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 #[cfg(target_os = "linux")]
 fn run_global_default_headless(
     project: Option<&path::PathBuf>,
     display: &str,
     window_title: Option<&str>,
+    keep_going: bool,
     timeout: Option<&time::Duration>,
     stdin: cli::Stdio,
     stdout: cli::Stdio,
@@ -259,46 +252,35 @@ fn run_global_default_headless(
                     run_reaper_headless(&reaper, project, display, stdin, stdout, stderr)
                         .map(|(xvfb, reaper)| ((xvfb, reaper), time::Instant::now()))?;
 
+                let mut exit_code: i32 = 1;
+
                 loop {
                     if let Some(window_title) = &window_title {
                         const XDOTOOL: &str = "xdotool";
                         const XDOTOOL_ARGS: &[&str; 2] = &["search", "--name"];
-                        if process::Command::new(XDOTOOL)
-                            .args(XDOTOOL_ARGS)
-                            .arg(window_title)
-                            .env("DISPLAY", display)
-                            .output()
-                            .map(|output| output.status.success())
-                            .unwrap_or(false)
+                        if exit_code != 0
+                            && process::Command::new(XDOTOOL)
+                                .args(XDOTOOL_ARGS)
+                                .arg(window_title)
+                                .env("DISPLAY", display)
+                                .output()
+                                .map(|output| output.status.success())
+                                .unwrap_or(false)
                         {
-                            reaper
-                                .kill()
-                                .and_then(|_| reaper.wait())
-                                .and_then(|_| xvfb.kill())
-                                .and_then(|_| xvfb.wait())?;
-                            process::exit(0);
+                            if keep_going {
+                                exit_code = 0;
+                            } else {
+                                kill_and_exit(&mut reaper, &mut xvfb, 0)?;
+                            }
                         }
                     }
                     match reaper.try_wait()? {
                         Some(_) if window_title.is_some() => {
-                            reaper
-                                .kill()
-                                .and_then(|_| reaper.wait())
-                                .and_then(|_| xvfb.kill())
-                                .and_then(|_| xvfb.wait())?;
-                            process::exit(1)
+                            kill_and_exit(&mut reaper, &mut xvfb, exit_code)?;
                         }
                         Some(status) => break Ok(status),
                         None if start.elapsed() >= *timeout => {
-                            reaper
-                                .kill()
-                                .and_then(|_| reaper.wait())
-                                .and_then(|_| xvfb.kill())
-                                .and_then(|_| xvfb.wait())?;
-                            if window_title.is_some() {
-                                process::exit(1);
-                            }
-                            process::exit(0);
+                            kill_and_exit(&mut reaper, &mut xvfb, exit_code)?;
                         }
                         None => thread::sleep(time::Duration::from_secs(1)),
                     }
@@ -368,4 +350,17 @@ fn run_reaper_headless(
                     })?,
             ))
         })
+}
+
+fn kill_and_exit(
+    reaper: &mut process::Child,
+    xvfb: &mut process::Child,
+    exit_code: i32,
+) -> io::Result<()> {
+    reaper
+        .kill()
+        .and_then(|_| reaper.wait())
+        .and_then(|_| xvfb.kill())
+        .and_then(|_| xvfb.wait())?;
+    process::exit(exit_code);
 }

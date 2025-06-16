@@ -103,6 +103,11 @@ pub enum CargoReaperCommand {
         )]
         window_title: Option<String>,
 
+        /// Continue until the specified timeout, even after a window is located.
+        #[cfg(target_os = "linux")]
+        #[arg(long, requires_all = ["headless", "window_title", "timeout"])]
+        keep_going: bool,
+
         /// The amount of time to wait before closing REAPER, in human-readable format (e.g. 10s, 2m, 1h).
         #[arg(
             long,
