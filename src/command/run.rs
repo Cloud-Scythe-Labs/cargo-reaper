@@ -144,7 +144,7 @@ pub(crate) fn run_headless(
                         )
                         .map(|(xvfb, reaper)| ((xvfb, reaper), time::Instant::now()))?;
 
-                        let mut exit_code: i32 = 1;
+                        let mut exit_code: i32 = keep_going.then_some(1).unwrap_or_default();
 
                         loop {
                             if let Some(window_title) = &window_title {
@@ -252,7 +252,7 @@ fn run_global_default_headless(
                     run_reaper_headless(&reaper, project, display, stdin, stdout, stderr)
                         .map(|(xvfb, reaper)| ((xvfb, reaper), time::Instant::now()))?;
 
-                let mut exit_code: i32 = 1;
+                let mut exit_code: i32 = keep_going.then_some(1).unwrap_or_default();
 
                 loop {
                     if let Some(window_title) = &window_title {
