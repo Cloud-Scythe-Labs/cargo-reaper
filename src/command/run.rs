@@ -321,6 +321,12 @@ fn run_reaper(
         .stdout(stdout)
         .stderr(stderr)
         .spawn()
+        .map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("Command `{}` failed: {}", reaper.display(), err),
+            )
+        })
 }
 
 #[cfg(target_os = "linux")]
@@ -343,6 +349,7 @@ fn run_reaper_headless(
         .stdout(stdout)
         .stderr(stderr)
         .spawn()
+        .map_err(|err| io::Error::new(err.kind(), format!("Command `{}` failed: {}", XVFB, err)))
         .and_then(|xvfb| {
             Ok((
                 xvfb,
@@ -352,7 +359,13 @@ fn run_reaper_headless(
                     .stdin(stdin)
                     .stdout(stdout)
                     .stderr(stderr)
-                    .spawn()?,
+                    .spawn()
+                    .map_err(|err| {
+                        io::Error::new(
+                            err.kind(),
+                            format!("Command `{}` failed: {}", reaper.display(), err),
+                        )
+                    })?,
             ))
         })
 }
