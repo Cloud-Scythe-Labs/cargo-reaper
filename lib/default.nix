@@ -81,60 +81,6 @@ in
       # REAPER doesn't like to execute in the background, and NixOS Test invokes commands
       # as root. To combat this, we change users based on machine before launching REAPER,
       # using xvfb and xdotool to search for an error window before exiting successfully.
-      mkReaperDryRun =
-        { user
-        , reaper
-        , xdotool
-        , xvfb-run
-        }:
-        writeShellScriptBin "reaper_dry_run" ''
-          set -euo pipefail
-
-          ERROR_WINDOW_TITLE=""
-          PROJECT_FILE=""
-
-          # Parse arguments
-          while [[ $# -gt 0 ]]; do
-            case "$1" in
-              --error)
-                ERROR_WINDOW_TITLE="$2"
-                shift 2
-                ;;
-              --project)
-                PROJECT_FILE="$2"
-                shift 2
-                ;;
-              *)
-                echo "Unknown option: $1"
-                exit 1
-                ;;
-            esac
-          done
-
-          function run_reaper() {
-            if [[ -n "$PROJECT_FILE" ]]; then
-              su - ${user} -c '${reaper}/bin/reaper "$PROJECT_FILE"' &
-            else
-              su - ${user} -c '${reaper}/bin/reaper' &
-            fi
-            export reaper_pid=$!
-            sleep 5
-
-            if [[ -n "$ERROR_WINDOW_TITLE" ]]; then
-              echo "searching for error window title '$ERROR_WINDOW_TITLE'"
-              error_window=$(${xdotool}/bin/xdotool search --name "$ERROR_WINDOW_TITLE" || true)
-              if [[ -n "$error_window" ]]; then
-                echo "found error window with ID: $error_window"
-                kill $reaper_pid
-                exit 1
-              fi
-            fi
-
-            kill $reaper_pid
-          }
-
-          ${xvfb-run}/bin/xvfb-run -a sh -c "$(declare -f run_reaper); run_reaper"
-        '';
       mkCargoReaperDryRun =
         { user
         , cargo-reaper

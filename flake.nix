@@ -88,7 +88,7 @@
     {
       checks =
         let
-          mkTestScripts = cargoReaper.scripts { inherit (pkgs) writeShellScriptBin; };
+          scripts = cargoReaper.scripts { inherit (pkgs) writeShellScriptBin; };
           commonTestArgs = src: {
             inherit src;
             strictDeps = true;
@@ -260,7 +260,7 @@
               tests = import ./tests {
                 inherit pkgs;
                 inherit (self.packages.${system}) cargo-reaper;
-                inherit (mkTestScripts) mkReaperDryRun mkCargoReaperDryRun;
+                inherit (scripts) mkCargoReaperDryRun;
               };
             in
             pkgs.nixosTest {
@@ -276,7 +276,7 @@
               tests = import ./tests {
                 inherit pkgs;
                 inherit (self.packages.${system}) cargo-reaper;
-                inherit (mkTestScripts) mkReaperDryRun mkCargoReaperDryRun;
+                inherit (scripts) mkCargoReaperDryRun;
                 imports = [
                   {
                     environment.systemPackages = [
@@ -301,7 +301,7 @@
               tests = import ./tests {
                 inherit pkgs;
                 inherit (self.packages.${system}) cargo-reaper;
-                inherit (mkTestScripts) mkReaperDryRun mkCargoReaperDryRun;
+                inherit (scripts) mkCargoReaperDryRun;
               };
             in
             pkgs.nixosTest {
@@ -375,7 +375,6 @@
           self.packages.${system}.default
           reaper
         ] ++ lib.optionals pkgs.stdenv.isLinux [
-          xvfb-run
           xdotool
         ];
       };
