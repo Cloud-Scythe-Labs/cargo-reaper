@@ -435,9 +435,38 @@ working, please see the options below for manually specifying a path to a REAPER
 <p><code>-e</code> <em>path</em> </br>
 <code>--exec</code> <em>path</em> </br></p>
   <dd>Override the REAPER executable file path.</dd>
+<p><code>-o</code> <em>path</em> </br>
+<code>--open</code> <em>path</em> </br>
+<code>--open-project</code> <em>path</em> </br></p>
+  <dd>Open a specific REAPER project file.</dd>
+<p><code>--no-build</code> </br></p>
+  <dd>Do not build plugin(s) before running REAPER.</dd>
+<p><code>-t</code> <em>duration</em> </br>
+<code>--timeout</code> <em>duration</em> </br></p>
+  <dd>The amount of time to wait before closing REAPER, in human-readable format (e.g. 10s, 2m, 1h).</dd>
+<p><code>--stdin</code> <em>stdio</em> </br></p>
+  <dd>Configuration for the child process’s standard input (stdin) handle.</dd>
+<p><code>--stdout</code> <em>stdio</em> </br></p>
+  <dd>Configuration for the child process’s standard output (stdout) handle.</dd>
+<p><code>--stderr</code> <em>stdio</em> </br></p>
+  <dd>Configuration for the child process’s standard error (stderr) handle.</dd>
 <p><code>-h</code> </br>
 <code>--help</code> </br></p>
   <dd>Print help information.</dd>
+<h2 id="additional-linux-options"><a class="header" href="#additional-linux-options">ADDITIONAL LINUX OPTIONS</a></h2>
+<p>The following options require <code>xserver</code> to be configured and have <code>Xvfb</code> and <code>xdotool</code> installed.
+These options are intended to enable testing in headless environments and to make it easier to
+assert the state an extension plugin reaches.</p>
+<p><code>--headless</code> </br></p>
+  <dd>Run REAPER in a headless environment.</dd>
+<p><code>-D</code> <em>display</em> </br>
+<code>--display</code> <em>display</em> </br></p>
+  <dd>The virtual display that should be used for the headless environment. Can also be passed with the <code>DISPLAY</code> environment variable, e.g. <code>DISPLAY=:99</code>.</dd>
+<p><code>-w</code> <em>title</em> </br>
+<code>--locate-window</code> <em>title</em> </br></p>
+  <dd>Locate a window based on its title and exit with status code 0 if found.</dd>
+<p><code>--keep-going</code> </br></p>
+  <dd>Continue until the specified timeout, even after a window is located.</dd>
 <h2 id="examples-4"><a class="header" href="#examples-4">EXAMPLES</a></h2>
 <ol>
 <li>Build a package or workspace containing a REAPER extension plugin and all of its dependencies, and open REAPER.</li>
@@ -452,6 +481,23 @@ cargo reaper run -- -p reaper_my_plugin --lib --release --target x86_64-pc-windo
 </code></pre>
 <blockquote>
 <p>Note that arguments passed to the <code>cargo-build</code> invocation must be trailing. These may be passed directly, or as positional arguments.</p>
+</blockquote>
+<ol start="3">
+<li>Run REAPER in a headless environment through <code>Xvfb</code> on Linux, and attempt to locate a window.</li>
+</ol>
+<pre><code class="language-sh">DISPLAY=:99 cargo-reaper run --headless \ # open REAPER on Xvfb display 99
+  --no-build \                            # but don't build any plugins
+  --open /path/to/my_project.RPP \        # open a pre-saved project (maybe with state that affects how the plugin behaves)
+  --locate-window "error: expected ..." \ # and locate an error window and exit successfully
+  --timeout 15s \                         # but only run REAPER for a maximum of 15 seconds
+  --keep-going \                          # and don't exit until the timeout is reached (even if the window is found)
+  --stdout null \                         # do not print Xvfb or REAPER info to stdout
+  --stderr null                           # do not print Xvfb or REAPER errors to stderr
+</code></pre>
+<blockquote>
+<p>TIP: The above assumes the extension plugin is already installed, skipping the build phase.
+This can be particularly useful since it doesn't require configuring a rust toolchain in order
+to build the plugin prior to testing it.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="cargo-reaper-clean"><a class="header" href="#cargo-reaper-clean">cargo-reaper-clean</a></h1>
 <h2 id="name-6"><a class="header" href="#name-6">NAME</a></h2>
