@@ -352,6 +352,7 @@ fn run_reaper_headless(
         })
 }
 
+#[cfg(target_os = "linux")]
 fn kill_and_exit(
     reaper: &mut process::Child,
     xvfb: &mut process::Child,
