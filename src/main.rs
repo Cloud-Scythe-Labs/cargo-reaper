@@ -2,11 +2,12 @@ use std::env;
 
 use crate::{
     cli::{CargoReaperArgs, CargoReaperCommand, CommandFactory, FromArgMatches},
-    command::{
-        build::build, clean::clean, link::link, list::list, new::new, run::run, run::run_headless,
-    },
+    command::{build::build, clean::clean, link::link, list::list, new::new, run::run},
     util::BINARY_NAME,
 };
+
+#[cfg(target_os = "linux")]
+use crate::command::run::run_headless;
 
 pub(crate) mod cli;
 pub(crate) mod command;
