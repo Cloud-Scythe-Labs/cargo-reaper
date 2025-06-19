@@ -2,8 +2,7 @@
 
 Any platform which is both supported by Rust and REAPER should work.
 
-> **Important**: [_**extension plugins built for 32bit Windows must be built with MSVC**_](https://www.reaper.fm/sdk/plugin/plugin.php).
-> The [MinGW-w64](https://www.mingw-w64.org/) target is untested, but MSVC for 64bit Windows is confirmed working.
+> **Important**: [_**extension plugins built for Windows must be built with MSVC**_](https://www.reaper.fm/sdk/plugin/plugin.php).
 
 The following are the canonical sources of truth for REAPER platform support:
 
