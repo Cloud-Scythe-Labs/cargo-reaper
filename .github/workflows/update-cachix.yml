@@ -1,0 +1,38 @@
+name: Update Cachix
+
+on:
+  workflow_call:
+    secrets:
+      CACHIX_AUTH_TOKEN:
+        required: true
+
+jobs:
+  update-cachix:
+    name: Update Cachix (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      id-token: "write"
+      contents: "read"
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            extra-substituters = https://cloud-scythe-labs.cachix.org
+            extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
+
+      - name: Install and configure Cachix
+        uses: cachix/cachix-action@v16
+        with:
+          name: cloud-scythe-labs
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+      - name: Build devShell
+        run: nix develop --keep-going -L
