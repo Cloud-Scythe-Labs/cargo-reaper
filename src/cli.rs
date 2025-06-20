@@ -3,6 +3,7 @@ use std::{path, process, time};
 pub(crate) use clap::{CommandFactory, FromArgMatches};
 use clap::{Parser, ValueEnum, ValueHint};
 
+#[cfg(target_os = "linux")]
 use crate::util::DEFAULT_XSERVER_DISPLAY;
 
 #[derive(Debug, Parser)]
