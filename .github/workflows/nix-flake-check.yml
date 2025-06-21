@@ -18,14 +18,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/determinate-nix-action@main
         with:
           extra-conf: |
+            lazy-trees = true
             extra-substituters = https://cloud-scythe-labs.cachix.org
             extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
 
       - uses: DeterminateSystems/flake-checker-action@main
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          upstream-cache: https://cloud-scythe-labs.cachix.org
 
-      - run: nix flake check --keep-going -L
+      - run: nix flake check --keep-going

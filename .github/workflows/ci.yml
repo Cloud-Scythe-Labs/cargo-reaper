@@ -24,5 +24,5 @@ jobs:
     secrets:
       CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
-  windows-msvc:
+  build-windows-msvc:
     uses: ./.github/workflows/build-windows-msvc.yml

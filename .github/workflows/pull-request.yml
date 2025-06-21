@@ -16,5 +16,5 @@ jobs:
       id-token: write
       contents: read
 
-  windows-msvc:
+  build-windows-msvc:
     uses: ./.github/workflows/build-windows-msvc.yml
