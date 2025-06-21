@@ -20,9 +20,7 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
         with:
-          determinate: true
           extra-conf: |
-            lazy-trees = true
             extra-substituters = https://cloud-scythe-labs.cachix.org
             extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
 
@@ -30,6 +28,7 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
         with:
+          use-flakehub: false
           upstream-cache: https://cloud-scythe-labs.cachix.org
 
       - run: nix flake check --keep-going
