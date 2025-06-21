@@ -7,6 +7,10 @@ use crate::error::{Message, TomlErrorEmitter};
 /// The REAPER executable binary name.
 pub(crate) const BINARY_NAME: &str = "reaper";
 
+#[cfg(target_os = "linux")]
+/// The default display used by `Xvfb` for running REAPER in a headless environment.
+pub(crate) const DEFAULT_XSERVER_DISPLAY: &str = ":99";
+
 /// The path to the REAPER binary executable.
 pub(crate) struct ReaperBinaryPath<'a>(pub(crate) Option<&'a path::Path>);
 impl fmt::Display for ReaperBinaryPath<'_> {

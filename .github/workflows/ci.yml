@@ -1,0 +1,28 @@
+name: Master CI
+on:
+  push:
+    branches:
+      - master
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions: read-all
+
+jobs:
+  nix-flake-check:
+    uses: ./.github/workflows/nix-flake-check.yml
+    permissions:
+      id-token: write
+      contents: read
+
+  update-cachix:
+    uses: ./.github/workflows/update-cachix.yml
+    permissions:
+      id-token: write
+      contents: read
+    secrets:
+      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+  build-windows-msvc:
+    uses: ./.github/workflows/build-windows-msvc.yml

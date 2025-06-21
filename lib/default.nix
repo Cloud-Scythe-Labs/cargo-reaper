@@ -60,7 +60,6 @@ in
           # We do not symlink the plugin since the `UserPlugins` directory is in
           # the `$HOME` directory which is inaccessible to the sandbox.
           buildPhaseCargoCommand = ''
-            ls .
             cargo reaper build --no-symlink \
               -p ${package} --lib \
               --release

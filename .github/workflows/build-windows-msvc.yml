@@ -1,0 +1,54 @@
+name: Build Windows MSVC
+
+on:
+  workflow_call:
+
+jobs:
+  build-windows-msvc:
+    name: Build Windows MSVC
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        run: | 
+          rustup update
+          rustup toolchain install
+          cargo --version
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-registry-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-registry-${{ runner.os }}-
+
+      - name: Cache Cargo dependencies (compiled)
+        uses: actions/cache@v4
+        with:
+          path: |
+            target
+          key: cargo-deps-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-deps-${{ runner.os }}-
+
+      - name: Install cargo reaper plugin
+        run: cargo install --path .
+
+      - name: Build Package Manifest
+        run: |
+          cd tests/plugin_manifests/package_manifest
+          cargo reaper build --no-symlink --target x86_64-pc-windows-msvc
+
+      - name: Build Workspace Manifest
+        run: |
+          cd tests/plugin_manifests/workspace_manifest
+          cargo reaper build --no-symlink --target x86_64-pc-windows-msvc
+
+      - name: Build Workspace Package Manifest
+        run: |
+          cd tests/plugin_manifests/workspace_package_manifest
+          cargo reaper build --no-symlink --target x86_64-pc-windows-msvc

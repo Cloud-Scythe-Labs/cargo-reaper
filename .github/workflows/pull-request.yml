@@ -1,0 +1,20 @@
+name: Pull Request
+on:
+  pull_request:
+    branches:
+      - master
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions: read-all
+
+jobs:
+  nix-flake-check:
+    uses: ./.github/workflows/nix-flake-check.yml
+    permissions:
+      id-token: write
+      contents: read
+
+  build-windows-msvc:
+    uses: ./.github/workflows/build-windows-msvc.yml

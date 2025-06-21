@@ -1,0 +1,34 @@
+name: Nix Flake Check
+
+on:
+  workflow_call:
+
+jobs:
+  nix-flake-check:
+    name: Nix Flake Check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      id-token: "write"
+      contents: "read"
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@main
+        with:
+          extra-conf: |
+            lazy-trees = true
+            extra-substituters = https://cloud-scythe-labs.cachix.org
+            extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
+
+      - uses: DeterminateSystems/flake-checker-action@main
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          upstream-cache: https://cloud-scythe-labs.cachix.org
+
+      - run: nix flake check --keep-going

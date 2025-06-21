@@ -3,6 +3,9 @@ use std::{path, process, time};
 pub(crate) use clap::{CommandFactory, FromArgMatches};
 use clap::{Parser, ValueEnum, ValueHint};
 
+#[cfg(target_os = "linux")]
+use crate::util::DEFAULT_XSERVER_DISPLAY;
+
 #[derive(Debug, Parser)]
 #[command(
     name = "cargo-reaper",
@@ -93,8 +96,8 @@ pub enum CargoReaperCommand {
             long,
             short = 'D',
             env = "DISPLAY",
-            default_value = ":99",
-            requires = "headless"
+            default_value = DEFAULT_XSERVER_DISPLAY,
+            required_if_eq("headless", "true")
         )]
         display: String,
 
