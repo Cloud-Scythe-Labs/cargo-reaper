@@ -27,9 +27,9 @@ jobs:
 
       - uses: DeterminateSystems/flake-checker-action@main
 
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-        with:
-          use-flakehub: false
-          upstream-cache: https://cloud-scythe-labs.cachix.org
+      # - uses: DeterminateSystems/magic-nix-cache-action@main
+      #   with:
+      #     use-flakehub: false
+      #     upstream-cache: https://cloud-scythe-labs.cachix.org
 
       - run: nix flake check --keep-going
