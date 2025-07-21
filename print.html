@@ -176,10 +176,19 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p><code>cargo-reaper</code> is a Cargo plugin designed to streamline the development of REAPER extension plugins with Rust.
-It serves as a companion for the <a href="https://github.com/helgoboss/reaper-rs"><code>reaper-rs</code></a> library,
+                        <table>
+<tr>
+<td style="vertical-align: top; text-align: left; border: none; padding-left: 0;">
+<h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p><code>cargo-reaper</code> is a Cargo plugin designed to streamline the development of REAPER extension plugins with Rust.<br />
+It serves as a companion for the <a href="https://github.com/helgoboss/reaper-rs"><code>reaper-rs</code></a> library,<br />
 which provides Rust bindings and tools for creating REAPER plugins -- including a procedural macro that bootstraps your plugin as a native REAPER extension.</p>
+</td>
+<td align="right" width="180" style="border: none;">
+<img src="https://raw.githubusercontent.com/Cloud-Scythe-Labs/cargo-reaper/refs/heads/master/assets/rea-corro.svg" alt="Corro the Unsafe Rust Urchin" width="150"/>
+</td>
+</tr>
+</table>
 <h2 id="motivation"><a class="header" href="#motivation">Motivation</a></h2>
 <p>Developing REAPER extension plugins requires intimate knowledge about REAPER and its behavior on each platform that it supports.
 This information is somewhat esoteric and not listed in the development docs, making extension plugin development a trial-and-error ordeal.
@@ -310,6 +319,8 @@ reaper_my_plugin = "./."
   <dd>Compile plugin(s) and launch REAPER.</dd>
 <p><a href="./commands/clean.html"><code>cargo-reaper clean</code></a> </br></p>
   <dd>Remove generated symlinks and artifacts.</dd>
+<p><a href="./commands/completions.html"><code>cargo-reaper completions</code></a> </br></p>
+  <dd>Generate shell completions.</dd>
 <p><code>help</code> </br></p>
   <dd>Print help or the help of the given subcommand(s).</dd>
 <h2 id="options"><a class="header" href="#options">OPTIONS</a></h2>
@@ -543,6 +554,44 @@ to build the plugin prior to testing it.</p>
 without removing them.</li>
 </ol>
 <pre><code class="language-sh">cargo reaper clean --remove-artifacts --dry-run
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cargo-reaper-completions"><a class="header" href="#cargo-reaper-completions">cargo-reaper-completions</a></h1>
+<h2 id="name-7"><a class="header" href="#name-7">NAME</a></h2>
+<p>cargo-reaper-completions -- Generate shell completion scripts.</p>
+<h2 id="synopsis-7"><a class="header" href="#synopsis-7">SYNOPSIS</a></h2>
+<p><code>cargo-reaper completions</code> <em>shell</em></p>
+<h2 id="description-7"><a class="header" href="#description-7">DESCRIPTION</a></h2>
+<p>Generate shell completions for the <code>cargo-reaper</code> command line application.</p>
+<p>The following shells are supported:</p>
+<ul>
+<li><a href="commands/completions.html#bash">Bash</a></li>
+<li><a href="commands/completions.html#elvish">Elvish</a></li>
+<li><a href="commands/completions.html#fish">Fish</a></li>
+<li><a href="commands/completions.html#powershell">PowerShell</a></li>
+<li><a href="commands/completions.html#zsh">Zsh</a></li>
+</ul>
+<h2 id="options-7"><a class="header" href="#options-7">OPTIONS</a></h2>
+<p><code>-h</code> </br>
+<code>--help</code> </br></p>
+  <dd>Print help information.</dd>
+<h2 id="examples-6"><a class="header" href="#examples-6">EXAMPLES</a></h2>
+<p>Below are examples of how to generate completion scripts for the supported shells.
+Note that this does not include instructions for sourcing the scripts or configuring your shell to enable completions.
+Please refer to your shell’s documentation for details.</p>
+<h3 id="bash"><a class="header" href="#bash">Bash</a></h3>
+<pre><code class="language-sh">cargo-reaper completions bash &gt; /usr/share/bash-completion/completions/cargo-reaper.bash
+</code></pre>
+<h3 id="elvish"><a class="header" href="#elvish">Elvish</a></h3>
+<pre><code class="language-sh">cargo-reaper completions elvish &gt; ~/.elvish/lib/cargo-reaper.elv
+</code></pre>
+<h3 id="fish"><a class="header" href="#fish">Fish</a></h3>
+<pre><code class="language-sh">cargo-reaper completions fish &gt; /usr/share/fish/vendor_completions.d/cargo-reaper.fish
+</code></pre>
+<h3 id="powershell"><a class="header" href="#powershell">PowerShell</a></h3>
+<pre><code class="language-sh">cargo-reaper completions powershell &gt; $HOME/Documents/PowerShell/cargo-reaper.ps1
+</code></pre>
+<h3 id="zsh"><a class="header" href="#zsh">Zsh</a></h3>
+<pre><code class="language-sh">cargo-reaper completions zsh &gt; /usr/share/zsh/site-functions/_cargo-reaper
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
 <h2 id="default-global-installation-path"><a class="header" href="#default-global-installation-path">Default Global Installation Path</a></h2>
