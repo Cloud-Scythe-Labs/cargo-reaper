@@ -7,25 +7,6 @@ use crate::error::{Message, TomlErrorEmitter};
 /// The REAPER executable binary name.
 pub(crate) const BINARY_NAME: &str = "reaper";
 
-#[cfg(target_os = "linux")]
-/// The default display used by `Xvfb` for running REAPER in a headless environment.
-pub(crate) const DEFAULT_XSERVER_DISPLAY: &str = ":99";
-
-/// The path to the REAPER binary executable.
-pub(crate) struct ReaperBinaryPath<'a>(pub(crate) Option<&'a path::Path>);
-impl fmt::Display for ReaperBinaryPath<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(reaper) = self.0 {
-            write!(f, "{}", reaper.display())
-        } else {
-            write!(
-                f,
-                "Unable to locate REAPER executable — download it at https://www.reaper.fm/download.php"
-            )
-        }
-    }
-}
-
 /// Represents a REAPER plugin's manifest information.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct PluginManifest {

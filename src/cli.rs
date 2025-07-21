@@ -1,10 +1,11 @@
-use std::{path, process, time};
+use std::{fmt, path, process, time};
 
-pub(crate) use clap::{CommandFactory, FromArgMatches};
+pub use clap::{CommandFactory, FromArgMatches};
 use clap::{Parser, ValueEnum, ValueHint};
 
 #[cfg(target_os = "linux")]
-use crate::util::DEFAULT_XSERVER_DISPLAY;
+/// The default display used by `Xvfb` for running REAPER in a headless environment.
+const DEFAULT_XSERVER_DISPLAY: &str = ":99";
 
 #[derive(Debug, Parser)]
 #[command(
@@ -23,11 +24,11 @@ pub struct CargoReaperArgs {
 impl CargoReaperArgs {
     /// Creates the `clap::Command::after_help` message which shows the detected path
     /// to a REAPER binary executable, if any.
-    pub(crate) fn reaper_help_heading(reaper_bin_path: Option<&path::Path>) -> String {
+    pub fn reaper_help_heading(reaper_bin_path: Option<&path::Path>) -> String {
         format!(
             "{}\n  {}",
             "\x1b[4mREAPER:\x1b[0m",
-            crate::util::ReaperBinaryPath(reaper_bin_path)
+            ReaperBinaryPath(reaper_bin_path)
         )
     }
 }
@@ -164,8 +165,23 @@ pub enum CargoReaperCommand {
     },
 }
 
+/// The path to the REAPER binary executable.
+pub(crate) struct ReaperBinaryPath<'a>(pub(crate) Option<&'a path::Path>);
+impl fmt::Display for ReaperBinaryPath<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(reaper) = self.0 {
+            write!(f, "{}", reaper.display())
+        } else {
+            write!(
+                f,
+                "Unable to locate REAPER executable — download it at https://www.reaper.fm/download.php"
+            )
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, ValueEnum)]
-pub(crate) enum Stdio {
+pub enum Stdio {
     Piped,
     Inherit,
     Null,
