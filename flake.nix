@@ -85,7 +85,7 @@
       cargo-reaper-drv = craneLib.buildPackage (commonArgs // {
         inherit cargoArtifacts;
         # NOTE: `installShellCompletion` only has support for Bash, Zsh and Fish
-        postInstallPhase = ''
+        postInstall = ''
           installShellCompletion --cmd cargo-reaper \
             --bash <($out/bin/cargo-reaper completions bash) \
             --fish <($out/bin/cargo-reaper completions fish) \
