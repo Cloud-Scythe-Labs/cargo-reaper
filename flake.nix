@@ -63,7 +63,9 @@
         inherit src;
         strictDeps = true;
 
-        nativeBuildInputs = with pkgs; lib.optionals stdenv.isLinux [
+        nativeBuildInputs = with pkgs; [
+          installShellFiles
+        ] ++ lib.optionals stdenv.isLinux [
           autoPatchelfHook
         ];
 
@@ -82,6 +84,13 @@
       # artifacts from above.
       cargo-reaper-drv = craneLib.buildPackage (commonArgs // {
         inherit cargoArtifacts;
+        # NOTE: `installShellCompletion` only has support for Bash, Zsh and Fish
+        postInstallPhase = ''
+          installShellCompletion --cmd cargo-reaper \
+            --bash <($out/bin/cargo-reaper completions bash) \
+            --fish <($out/bin/cargo-reaper completions fish) \
+            --zsh <($out/bin/cargo-reaper completions zsh)
+        '';
         doCheck = false;
       });
     in
