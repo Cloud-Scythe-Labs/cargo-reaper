@@ -1,5 +1,4 @@
 /target
-/completions
 result*
 docs/book
 .nixos-test-history

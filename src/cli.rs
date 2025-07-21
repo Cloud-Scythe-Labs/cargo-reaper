@@ -1,11 +1,20 @@
 use std::{fmt, path, process, time};
 
 pub use clap::{CommandFactory, FromArgMatches};
-use clap::{Parser, ValueEnum, ValueHint};
+use clap::{Parser, ValueEnum, ValueHint, builder::styling};
+use colored::Colorize;
 
 #[cfg(target_os = "linux")]
 /// The default display used by `Xvfb` for running REAPER in a headless environment.
 const DEFAULT_XSERVER_DISPLAY: &str = ":99";
+
+/// The terminal output style configuration.
+pub const TERM_STYLE: styling::Styles = styling::Styles::styled()
+    .header(styling::AnsiColor::Green.on_default().bold())
+    .usage(styling::AnsiColor::Green.on_default().bold())
+    .literal(styling::AnsiColor::Cyan.on_default())
+    .placeholder(styling::AnsiColor::Cyan.on_default())
+    .valid(styling::AnsiColor::Cyan.on_default());
 
 #[derive(Debug, Parser)]
 #[command(
@@ -27,7 +36,7 @@ impl CargoReaperArgs {
     pub fn reaper_help_heading(reaper_bin_path: Option<&path::Path>) -> String {
         format!(
             "{}\n  {}",
-            "\x1b[4mREAPER:\x1b[0m",
+            "REAPER:".green().bold(),
             ReaperBinaryPath(reaper_bin_path)
         )
     }
@@ -74,8 +83,7 @@ pub enum CargoReaperCommand {
 
         /// Open a specific REAPER project file.
         #[arg(
-            long = "open-project",
-            alias = "open",
+            long = "open",
             short = 'o',
             value_name = "PROJECT",
             value_hint = ValueHint::FilePath
@@ -127,15 +135,15 @@ pub enum CargoReaperCommand {
         timeout: Option<time::Duration>,
 
         /// Configuration for the child process’s standard input (stdin) handle.
-        #[arg(long, value_name = "STDIO", default_value = "null")]
+        #[arg(long, short = 'I', value_name = "STDIO", default_value = "null")]
         stdin: Stdio,
 
         /// Configuration for the child process’s standard output (stdout) handle.
-        #[arg(long, value_name = "STDIO", default_value = "inherit")]
+        #[arg(long, short = 'O', value_name = "STDIO", default_value = "inherit")]
         stdout: Stdio,
 
         /// Configuration for the child process’s standard error (stderr) handle.
-        #[arg(long, value_name = "STDIO", default_value = "inherit")]
+        #[arg(long, short = 'E', value_name = "STDIO", default_value = "inherit")]
         stderr: Stdio,
 
         /// Arguments to forward to the `cargo build` invocation.
@@ -162,6 +170,16 @@ pub enum CargoReaperCommand {
         /// Remove artifacts that cargo-reaper has generated in the past.
         #[arg(long, short = 'a', default_value = "false")]
         remove_artifacts: bool,
+    },
+
+    /// Generate shell completions.
+    #[command(
+        after_help = format!("{} cargo-reaper completions bash > /usr/share/bash-completion/completions/cargo-reaper.bash", "Example:".green().bold())
+    )]
+    Completions {
+        /// The available shells to generate completion scripts.
+        #[arg(value_enum)]
+        shell: clap_complete::Shell,
     },
 }
 
