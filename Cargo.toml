@@ -33,5 +33,8 @@ tokio = { version = "1.40", features = ["macros", "rt-multi-thread"] }
 toml = "0.8"
 toml_edit = "0.22"
 which = "7.0"
-whoami = "1.6"
-zip = "3"
+whoami = { version = "1.6", default-features = false }
+zip = { version = "3", default-features = false, features = [
+  "deflate",
+  "time",
+] }
