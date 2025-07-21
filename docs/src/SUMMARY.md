@@ -11,4 +11,5 @@
   - [`cargo-reaper link`](./commands/link.md)
   - [`cargo-reaper run`](./commands/run.md)
   - [`cargo-reaper clean`](./commands/clean.md)
+  - [`cargo-reaper completions`](./commands/completions.md)
 - [Appendix: Glossary](./appendix/glossary.md)

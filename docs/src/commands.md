@@ -33,6 +33,9 @@ Each command is documented in its own section:
 [`cargo-reaper clean`](./commands/clean.md) </br>
   <dd>Remove generated symlinks and artifacts.</dd>
 
+[`cargo-reaper completions`](./commands/completions.md) </br>
+  <dd>Generate shell completions.</dd>
+
 `help` </br>
   <dd>Print help or the help of the given subcommand(s).</dd>
 

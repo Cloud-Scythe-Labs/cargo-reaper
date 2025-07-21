@@ -1,7 +1,7 @@
-use std::env;
+use std::{env, io};
 
 use crate::{
-    cli::{CargoReaperArgs, CargoReaperCommand, CommandFactory, FromArgMatches},
+    cli::{CargoReaperArgs, CargoReaperCommand, CommandFactory, FromArgMatches, TERM_STYLE},
     command::{build::build, clean::clean, link::link, list::list, new::new, run::run},
     util::BINARY_NAME,
 };
@@ -24,14 +24,16 @@ async fn main() -> anyhow::Result<()> {
         args.remove(1);
     }
 
-    let cmd = CargoReaperArgs::command().after_help(CargoReaperArgs::reaper_help_heading(
-        which::which(BINARY_NAME)
-            .or_else(|_| util::os::locate_global_default())
-            .ok()
-            .as_deref(),
-    ));
+    let cmd = CargoReaperArgs::command().styles(TERM_STYLE).after_help(
+        CargoReaperArgs::reaper_help_heading(
+            which::which(BINARY_NAME)
+                .or_else(|_| util::os::locate_global_default())
+                .ok()
+                .as_deref(),
+        ),
+    );
 
-    let args = CargoReaperArgs::from_arg_matches(&cmd.get_matches_from(args)).unwrap();
+    let args = CargoReaperArgs::from_arg_matches(&cmd.clone().get_matches_from(args)).unwrap();
 
     match args.command {
         CargoReaperCommand::New { path } => new(path).await,
@@ -87,5 +89,12 @@ async fn main() -> anyhow::Result<()> {
             dry_run,
             remove_artifacts,
         } => clean(&plugins, dry_run, remove_artifacts),
+        CargoReaperCommand::Completions { shell } => {
+            let bin_name = cmd.get_name().to_string();
+            let mut cmd = cmd;
+            clap_complete::generate(shell, &mut cmd, bin_name, &mut io::stdout());
+
+            Ok(())
+        }
     }
 }

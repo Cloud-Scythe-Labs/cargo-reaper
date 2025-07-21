@@ -1,10 +1,20 @@
-use std::{path, process, time};
+use std::{fmt, path, process, time};
 
-pub(crate) use clap::{CommandFactory, FromArgMatches};
-use clap::{Parser, ValueEnum, ValueHint};
+pub use clap::{CommandFactory, FromArgMatches};
+use clap::{Parser, ValueEnum, ValueHint, builder::styling};
+use colored::Colorize;
 
 #[cfg(target_os = "linux")]
-use crate::util::DEFAULT_XSERVER_DISPLAY;
+/// The default display used by `Xvfb` for running REAPER in a headless environment.
+const DEFAULT_XSERVER_DISPLAY: &str = ":99";
+
+/// The terminal output style configuration.
+pub const TERM_STYLE: styling::Styles = styling::Styles::styled()
+    .header(styling::AnsiColor::Green.on_default().bold())
+    .usage(styling::AnsiColor::Green.on_default().bold())
+    .literal(styling::AnsiColor::Cyan.on_default())
+    .placeholder(styling::AnsiColor::Cyan.on_default())
+    .valid(styling::AnsiColor::Cyan.on_default());
 
 #[derive(Debug, Parser)]
 #[command(
@@ -23,11 +33,11 @@ pub struct CargoReaperArgs {
 impl CargoReaperArgs {
     /// Creates the `clap::Command::after_help` message which shows the detected path
     /// to a REAPER binary executable, if any.
-    pub(crate) fn reaper_help_heading(reaper_bin_path: Option<&path::Path>) -> String {
+    pub fn reaper_help_heading(reaper_bin_path: Option<&path::Path>) -> String {
         format!(
             "{}\n  {}",
-            "\x1b[4mREAPER:\x1b[0m",
-            crate::util::ReaperBinaryPath(reaper_bin_path)
+            "REAPER:".green().bold(),
+            ReaperBinaryPath(reaper_bin_path)
         )
     }
 }
@@ -73,8 +83,7 @@ pub enum CargoReaperCommand {
 
         /// Open a specific REAPER project file.
         #[arg(
-            long = "open-project",
-            alias = "open",
+            long = "open",
             short = 'o',
             value_name = "PROJECT",
             value_hint = ValueHint::FilePath
@@ -126,15 +135,15 @@ pub enum CargoReaperCommand {
         timeout: Option<time::Duration>,
 
         /// Configuration for the child process’s standard input (stdin) handle.
-        #[arg(long, value_name = "STDIO", default_value = "null")]
+        #[arg(long, short = 'I', value_name = "STDIO", default_value = "null")]
         stdin: Stdio,
 
         /// Configuration for the child process’s standard output (stdout) handle.
-        #[arg(long, value_name = "STDIO", default_value = "inherit")]
+        #[arg(long, short = 'O', value_name = "STDIO", default_value = "inherit")]
         stdout: Stdio,
 
         /// Configuration for the child process’s standard error (stderr) handle.
-        #[arg(long, value_name = "STDIO", default_value = "inherit")]
+        #[arg(long, short = 'E', value_name = "STDIO", default_value = "inherit")]
         stderr: Stdio,
 
         /// Arguments to forward to the `cargo build` invocation.
@@ -162,10 +171,35 @@ pub enum CargoReaperCommand {
         #[arg(long, short = 'a', default_value = "false")]
         remove_artifacts: bool,
     },
+
+    /// Generate shell completions.
+    #[command(
+        after_help = format!("{} cargo-reaper completions bash > /usr/share/bash-completion/completions/cargo-reaper.bash", "Example:".green().bold())
+    )]
+    Completions {
+        /// The available shells to generate completion scripts.
+        #[arg(value_enum)]
+        shell: clap_complete::Shell,
+    },
+}
+
+/// The path to the REAPER binary executable.
+pub(crate) struct ReaperBinaryPath<'a>(pub(crate) Option<&'a path::Path>);
+impl fmt::Display for ReaperBinaryPath<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(reaper) = self.0 {
+            write!(f, "{}", reaper.display())
+        } else {
+            write!(
+                f,
+                "Unable to locate REAPER executable — download it at https://www.reaper.fm/download.php"
+            )
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
-pub(crate) enum Stdio {
+pub enum Stdio {
     Piped,
     Inherit,
     Null,
