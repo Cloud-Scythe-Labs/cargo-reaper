@@ -2,7 +2,7 @@
 
 <h1 align="center"><i>cargo-reaper</i></h1>
 
-<p align="center"><img src="assets/rea-corro.svg" alt="Corro the Unsafe Rust Urchin" width="200"/></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Cloud-Scythe-Labs/cargo-reaper/refs/heads/master/assets/rea-corro.svg" alt="Corro the Unsafe Rust Urchin" width="200"/></p>
 
 `cargo-reaper` is a convenience wrapper around Cargo that adds a post-build hook to streamline REAPER extension development. It automatically renames the compiled plugin to include the required `reaper_` prefix and symlinks it to REAPER’s `UserPlugins` directory.
 
