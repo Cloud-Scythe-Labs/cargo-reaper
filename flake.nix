@@ -209,6 +209,54 @@
             cargoNextestPartitionsExtraArgs = "--no-tests=warn";
           });
 
+          test-cargo-reaper-new-ext = pkgs.stdenv.mkDerivation {
+            name = "test-cargo-reaper-new-ext";
+            buildInputs = [
+              self.packages.${system}.default
+            ];
+            doCheck = true;
+            phases = [
+              "buildPhase"
+              "checkPhase"
+              "installPhase"
+            ];
+            buildPhase = ''
+              cargo-reaper new --template ext reaper_test
+            '';
+            checkPhase = ''
+              if [ ! -d "reaper_test" ]; then
+                exit 1
+              fi
+            '';
+            installPhase = ''
+              mkdir -p $out
+              mv reaper_test $out/
+            '';
+          };
+          test-cargo-reaper-new-vst = pkgs.stdenv.mkDerivation {
+            name = "test-cargo-reaper-new-vst";
+            buildInputs = [
+              self.packages.${system}.default
+            ];
+            doCheck = true;
+            phases = [
+              "buildPhase"
+              "checkPhase"
+              "installPhase"
+            ];
+            buildPhase = ''
+              cargo-reaper new --template vst reaper_test
+            '';
+            checkPhase = ''
+              if [ ! -d "reaper_test" ]; then
+                exit 1
+              fi
+            '';
+            installPhase = ''
+              mkdir -p $out
+              mv reaper_test $out/
+            '';
+          };
           test-cargo-reaper-list-package-manifest = pkgs.stdenv.mkDerivation {
             name = "test-cargo-reaper-list-package-manifest";
             src = testFileset ./tests/plugin_manifests/package_manifest;
