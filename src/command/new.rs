@@ -20,12 +20,11 @@ pub(crate) async fn new(template: PluginTemplate, path: path::PathBuf) -> anyhow
         &template
     );
     new_from_template(template, &path, &package_name)
-        .await
         .map_err(|err| anyhow::anyhow!("failed to create new REAPER plugin project: {err:?}"))
 }
 
 /// Downloads and initializes the REAPER extension plugin template.
-pub(crate) async fn new_from_template(
+pub(crate) fn new_from_template(
     template: PluginTemplate,
     destination: &path::PathBuf,
     package_name: &str,
@@ -33,7 +32,7 @@ pub(crate) async fn new_from_template(
     let temp_dir = tempfile::tempdir()?;
     template.extract(&temp_dir)?;
 
-    fs::rename(&temp_dir.path(), destination)?;
+    fs::rename(temp_dir.path(), destination)?;
 
     let cargo_toml_path = destination.join("Cargo.toml");
     let mut cargo_toml = fs::read_to_string(&cargo_toml_path)?.parse::<toml_edit::DocumentMut>()?;
@@ -55,13 +54,12 @@ pub(crate) async fn new_from_template(
             fs::read_to_string(&reaper_toml_path)?.parse::<toml_edit::DocumentMut>()?;
         if let Some(extension_plugins) = reaper_toml
             .get_mut("extension_plugins")
-            .map(toml_edit::Item::as_table_mut)
-            .flatten()
+            .and_then(toml_edit::Item::as_table_mut)
         {
             extension_plugins.insert(
                 &(package_name.starts_with("reaper_"))
                     .then(|| package_name.into())
-                    .unwrap_or_else(|| format!("reaper_{package_name}")),
+                    .unwrap_or(format!("reaper_{package_name}")),
                 toml_edit::value("./."),
             );
         }
