@@ -1,0 +1,13 @@
+[package]
+name = "reaper_vst_plugin"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+reaper-low = { git = "https://github.com/helgoboss/reaper-rs.git", branch = "master" }
+reaper-medium = { git = "https://github.com/helgoboss/reaper-rs.git", branch = "master" }
+vst = "0.4"
+
+[lib]
+name = "_vst_plugin"
+crate-type = ["cdylib"]

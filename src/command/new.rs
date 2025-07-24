@@ -47,25 +47,27 @@ pub(crate) async fn new_from_template(
             *name = toml_edit::value(package_name);
         }
     }
+    fs::write(&cargo_toml_path, cargo_toml.to_string())?;
 
-    let reaper_toml_path = destination.join("reaper.toml");
-    let mut reaper_toml =
-        fs::read_to_string(&reaper_toml_path)?.parse::<toml_edit::DocumentMut>()?;
-    if let Some(extension_plugins) = reaper_toml
-        .get_mut("extension_plugins")
-        .map(toml_edit::Item::as_table_mut)
-        .flatten()
-    {
-        extension_plugins.insert(
-            &(package_name.starts_with("reaper_"))
-                .then(|| package_name.into())
-                .unwrap_or_else(|| format!("reaper_{package_name}")),
-            toml_edit::value("./."),
-        );
+    if let PluginTemplate::Ext = template {
+        let reaper_toml_path = destination.join("reaper.toml");
+        let mut reaper_toml =
+            fs::read_to_string(&reaper_toml_path)?.parse::<toml_edit::DocumentMut>()?;
+        if let Some(extension_plugins) = reaper_toml
+            .get_mut("extension_plugins")
+            .map(toml_edit::Item::as_table_mut)
+            .flatten()
+        {
+            extension_plugins.insert(
+                &(package_name.starts_with("reaper_"))
+                    .then(|| package_name.into())
+                    .unwrap_or_else(|| format!("reaper_{package_name}")),
+                toml_edit::value("./."),
+            );
+        }
+        fs::write(&reaper_toml_path, reaper_toml.to_string())?;
     }
 
-    fs::write(&cargo_toml_path, cargo_toml.to_string())?;
-    fs::write(&reaper_toml_path, reaper_toml.to_string())?;
     fs::write(destination.join(".gitignore"), "/target")?;
 
     gix::init(destination).map_err(|err| {

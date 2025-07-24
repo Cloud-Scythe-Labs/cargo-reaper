@@ -324,37 +324,6 @@
             };
         };
 
-      # These checks require `--option sandbox false`.
-      checks-no-sandbox = {
-        # TODO: add a `--offline` feature to `cargo reaper new`, then
-        # pre-populate the cargo temp directory using `fetchFromGithub`.
-        # Once we can invoke it in offline mode, we can move this back to checks.
-        test-cargo-reaper-new = pkgs.stdenv.mkDerivation {
-          name = "test-cargo-reaper-new";
-          buildInputs = [
-            self.packages.${system}.default
-          ];
-          doCheck = true;
-          phases = [
-            "buildPhase"
-            "checkPhase"
-            "installPhase"
-          ];
-          buildPhase = ''
-            cargo-reaper new reaper_test
-          '';
-          checkPhase = ''
-            if [ ! -d "reaper_test" ]; then
-              exit 1
-            fi
-          '';
-          installPhase = ''
-            mkdir -p $out
-            mv reaper_test $out/
-          '';
-        };
-      };
-
       packages = rec {
         cargo-reaper = cargo-reaper-drv;
         default = cargo-reaper;
