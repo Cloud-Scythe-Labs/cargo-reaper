@@ -7,6 +7,16 @@ build = "build.rs"
 edition = "2024"
 license = "MIT"
 readme = "README.md"
+include = [
+  "src",
+  "Cargo.toml",
+  "Cargo.lock",
+  "build.rs",
+  "templates",
+  "!/docs/**",
+  "README.md",
+  "LICENSE",
+]
 publish = true
 
 [build-dependencies]

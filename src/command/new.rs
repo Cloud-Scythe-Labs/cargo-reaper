@@ -34,7 +34,7 @@ pub(crate) fn new_from_template(
 
     fs::rename(temp_dir.path(), destination)?;
 
-    let cargo_toml_path = destination.join("Cargo.toml");
+    let cargo_toml_path = destination.join("cargo.toml");
     let mut cargo_toml = fs::read_to_string(&cargo_toml_path)?.parse::<toml_edit::DocumentMut>()?;
     if let Some(package) = cargo_toml.get_mut("package") {
         if let Some(name) = package.get_mut("name") {
@@ -46,7 +46,8 @@ pub(crate) fn new_from_template(
             *name = toml_edit::value(package_name);
         }
     }
-    fs::write(&cargo_toml_path, cargo_toml.to_string())?;
+    fs::write(&cargo_toml_path, cargo_toml.to_string())
+        .and_then(|_| fs::rename(&cargo_toml_path, destination.join("Cargo.toml")))?;
 
     if let PluginTemplate::Ext = template {
         let reaper_toml_path = destination.join("reaper.toml");
