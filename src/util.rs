@@ -2,10 +2,31 @@ use std::{env, fmt, fs, io, path};
 
 pub(crate) use colored::Colorize;
 
-use crate::error::{Message, TomlErrorEmitter};
+use crate::{
+    cli::PluginTemplate,
+    error::{Message, TomlErrorEmitter},
+};
 
 /// The REAPER executable binary name.
 pub(crate) const BINARY_NAME: &str = "reaper";
+
+impl PluginTemplate {
+    /// The extension plugin template directory
+    const EXT: include_dir::Dir<'_> = include_dir::include_dir!("templates/extension");
+
+    /// The vst plugin template directory
+    const VST: include_dir::Dir<'_> = include_dir::include_dir!("templates/vst");
+
+    /// Create directories and extract all files to real filesystem.
+    /// Creates parent directories of `path` if they do not already exist.
+    /// Fails if some files already exist. In case of error, partially extracted directory may remain on the filesystem.
+    pub(crate) fn extract<S: AsRef<path::Path>>(self, base_path: S) -> io::Result<()> {
+        match self {
+            Self::Ext => Self::EXT.extract(base_path),
+            Self::Vst => Self::VST.extract(base_path),
+        }
+    }
+}
 
 /// Represents a REAPER plugin's manifest information.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]

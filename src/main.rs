@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
     let args = CargoReaperArgs::from_arg_matches(&cmd.clone().get_matches_from(args)).unwrap();
 
     match args.command {
-        CargoReaperCommand::New { path } => new(path).await,
+        CargoReaperCommand::New { template, path } => new(template, path).await,
         CargoReaperCommand::List => list(),
         CargoReaperCommand::Build { no_symlink, args } => build(no_symlink, args),
         CargoReaperCommand::Link { paths } => link(paths),

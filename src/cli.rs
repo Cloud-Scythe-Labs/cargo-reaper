@@ -45,7 +45,13 @@ impl CargoReaperArgs {
 #[derive(Debug, Clone, clap::Subcommand)]
 pub enum CargoReaperCommand {
     /// Create a new REAPER extension plugin from a template at `PATH`.
-    New { path: path::PathBuf },
+    New {
+        /// The type of template to use.
+        #[arg(long, short = 't', default_value_t = PluginTemplate::Ext)]
+        template: PluginTemplate,
+
+        path: path::PathBuf,
+    },
 
     /// List available extension plugin(s).
     List,
@@ -181,6 +187,24 @@ pub enum CargoReaperCommand {
         #[arg(value_enum)]
         shell: clap_complete::Shell,
     },
+}
+
+/// The type of template to use
+#[derive(Debug, Clone, clap::ValueEnum)]
+pub enum PluginTemplate {
+    /// Use the extension plugin template
+    Ext,
+
+    /// Use the VST plugin template
+    Vst,
+}
+impl fmt::Display for PluginTemplate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Ext => write!(f, "ext"),
+            Self::Vst => write!(f, "vst"),
+        }
+    }
 }
 
 /// The path to the REAPER binary executable.
