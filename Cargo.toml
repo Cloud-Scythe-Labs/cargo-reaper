@@ -25,10 +25,7 @@ colored = "3"
 dirs = "6"
 gix = { version = "0.72", default-features = false }
 humantime = "2.2"
-reqwest = { version = "0.12", default-features = false, features = [
-  "blocking",
-  "rustls-tls",
-] }
+include_dir = "0.7"
 serde = "1"
 tempfile = "3.19"
 tokio = { version = "1.40", features = ["macros", "rt-multi-thread"] }
@@ -36,7 +33,3 @@ toml = "0.8"
 toml_edit = "0.22"
 which = "7.0"
 whoami = { version = "1.6", default-features = false }
-zip = { version = "3", default-features = false, features = [
-  "deflate",
-  "time",
-] }
