@@ -2,7 +2,7 @@ use std::{fs, path};
 
 use crate::{cli::PluginTemplate, util::Colorize};
 
-pub(crate) async fn new(template: PluginTemplate, path: path::PathBuf) -> anyhow::Result<()> {
+pub(crate) fn new(template: PluginTemplate, path: path::PathBuf) -> anyhow::Result<()> {
     if path.exists() {
         anyhow::bail!("project path already exists");
     }

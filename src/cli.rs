@@ -21,7 +21,7 @@ pub const TERM_STYLE: styling::Styles = styling::Styles::styled()
     name = "cargo-reaper",
     version,
     author,
-    about = "A Cargo plugin for developing REAPER extension plugins with Rust.",
+    about = "A Cargo plugin for developing REAPER extension and VST plugins with Rust.",
     long_about = "`cargo-reaper` is a convenience wrapper around Cargo that adds a post-build hook to streamline REAPER extension development. It automatically renames the compiled plugin to include the required `reaper_` prefix and symlinks it to REAPER’s `UserPlugins` directory.
 
 By default, Cargo prefixes dynamic libraries with `lib`, which REAPER does not recognize. Manually renaming the plugin and keeping the `UserPlugins` directory up-to-date can be tedious -- `cargo-reaper` takes care of all that for you, across all supported platforms."
@@ -44,7 +44,7 @@ impl CargoReaperArgs {
 
 #[derive(Debug, Clone, clap::Subcommand)]
 pub enum CargoReaperCommand {
-    /// Create a new REAPER extension plugin from a template at `PATH`.
+    /// Create a new REAPER plugin from a template at `PATH`.
     New {
         /// The type of template to use.
         #[arg(long, short = 't', default_value_t = PluginTemplate::Ext)]

@@ -15,8 +15,7 @@ pub(crate) mod config;
 pub(crate) mod error;
 pub(crate) mod util;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     let mut args = env::args().collect::<Vec<_>>();
 
     // If invoked by Cargo as `cargo reaper`, strip the inserted "reaper" argument
@@ -36,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
     let args = CargoReaperArgs::from_arg_matches(&cmd.clone().get_matches_from(args)).unwrap();
 
     match args.command {
-        CargoReaperCommand::New { template, path } => new(template, path).await,
+        CargoReaperCommand::New { template, path } => new(template, path),
         CargoReaperCommand::List => list(),
         CargoReaperCommand::Build { no_symlink, args } => build(no_symlink, args),
         CargoReaperCommand::Link { paths } => link(paths),
