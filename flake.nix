@@ -1,5 +1,5 @@
 {
-  description = "A Cargo plugin for developing REAPER extension plugins with Rust.";
+  description = "A Cargo plugin for developing REAPER extension and VST plugins with Rust.";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
