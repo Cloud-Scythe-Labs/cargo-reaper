@@ -214,8 +214,8 @@ pub(crate) fn _rename_plugin(
         .map_err(|err| anyhow::anyhow!("failed to rename plugin: {err:?}"))?;
 
     println!(
-        "    {} plugin renamed {} → {}",
-        "Finished".green().bold(),
+        "     {} {} → {}",
+        "Renamed".green().bold(),
         old_plugin_path.display(),
         new_plugin_path.display()
     );
@@ -262,7 +262,7 @@ where
         } else {
             println!(
                 "    {} symbolic link already exists ({})",
-                "Finished".green().bold(),
+                "Skipping".yellow().bold(),
                 symlink_path.display(),
             );
             return Ok(());
@@ -274,8 +274,8 @@ where
         .map_err(|err| anyhow::anyhow!("failed to link extension plugin: {err:?}"))?;
 
     println!(
-        "    {} symbolic link created {} → {}",
-        "Finished".green().bold(),
+        "     {} symbolic link {} → {}",
+        "Created".green().bold(),
         symlink_path.display(),
         plugin_path.display()
     );
