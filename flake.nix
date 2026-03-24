@@ -101,6 +101,60 @@
           commonTestArgs = src: {
             inherit src;
             strictDeps = true;
+            cargoVendorDir =
+              let
+                isReaperLow = p: p.name == "reaper-low";
+                parseCargoSource = source:
+                  let
+                    # Split "type+rest" e.g. "git+https://..." or "registry+https://..."
+                    hasPlusType = builtins.match "^[a-z]+\\+.*" source != null;
+                    type = if hasPlusType then lib.elemAt (lib.splitString "+" source) 0 else "unknown";
+                    withoutType = if hasPlusType then lib.removePrefix "${type}+" source else source;
+                    # Split off rev fragment "#abc123"
+                    fragmentParts = lib.splitString "#" withoutType;
+                    urlWithQuery = lib.elemAt fragmentParts 0;
+                    rev = if lib.length fragmentParts > 1 then lib.last fragmentParts else null;
+                    # Split off query string "?branch=master&foo=bar" into an attrset
+                    queryParts = lib.splitString "?" urlWithQuery;
+                    url = lib.elemAt queryParts 0;
+                    queryString = if lib.length queryParts > 1 then lib.last queryParts else null;
+                    query =
+                      if queryString != null then
+                        builtins.listToAttrs (map (kv:
+                          let pair = lib.splitString "=" kv;
+                          in { name = lib.elemAt pair 0; value = lib.elemAt pair 1; }
+                        ) (lib.splitString "&" queryString))
+                      else
+                        {};
+                  in
+                  {
+                    inherit type url rev query;
+                  };
+              in
+              craneLib.vendorCargoDeps {
+                inherit src;
+                overrideVendorGitCheckout = ps: drv:
+                  if lib.any (p: isReaperLow p) ps then
+                    let
+                      p = lib.findFirst isReaperLow null ps;
+                      parsed = parseCargoSource (builtins.trace "Located ${p.name} which requires a vendor override: ${builtins.toJSON p}" p.source);
+                      src = pkgs.fetchgit {
+                        inherit (builtins.trace "Parsed cargo source for ${p.name}: ${builtins.toJSON parsed}" parsed) url rev;
+                        fetchSubmodules = true;
+                        hash = "sha256-ggFAtcA0d6Gr1o8omW1vOP2V+WTpiTbaj2rRNQXbejM=";
+                      };
+                    in
+                    pkgs.runCommand "cargo-git-reaper-rs-with-submodules" {} ''
+                      echo "Patching WDL submodule for vendored dependency ${p.name}-${p.version}"
+                      cp -r ${drv} $out
+                      chmod -R u+w $out
+                      mkdir -p $out/${p.name}-${p.version}/lib/WDL
+                      cp -r ${src}/main/low/lib/WDL $out/${p.name}-${p.version}/lib
+                      echo "Done: $out/${p.name}-${p.version}/lib/WDL"
+                    ''
+                  else
+                    drv;
+              };
           };
 
           testFileset = root: lib.fileset.toSource {
@@ -320,7 +374,7 @@
                 inherit (scripts) mkCargoReaperDryRun;
               };
             in
-            pkgs.nixosTest {
+            pkgs.testers.nixosTest {
               name = "test-cargo-reaper-link";
               inherit (tests) nodes;
               testScript = tests.test-cargo-reaper-link {
@@ -344,7 +398,7 @@
                 ];
               };
             in
-            pkgs.nixosTest {
+            pkgs.testers.nixosTest {
               name = "test-cargo-reaper-run";
               inherit (tests) nodes;
               testScript = tests.test-cargo-reaper-run rec {
@@ -361,7 +415,7 @@
                 inherit (scripts) mkCargoReaperDryRun;
               };
             in
-            pkgs.nixosTest {
+            pkgs.testers.nixosTest {
               name = "test-cargo-reaper-clean";
               inherit (tests) nodes;
               testScript = tests.test-cargo-reaper-clean {
