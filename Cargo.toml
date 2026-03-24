@@ -38,7 +38,7 @@ humantime = "2.2"
 include_dir = "0.7"
 serde = "1"
 tempfile = "3.19"
-toml = "0.9"
+toml = "1.0"
 toml_edit = "0.25"
 which = "8.0"
 whoami = { version = "2.0", default-features = false }
