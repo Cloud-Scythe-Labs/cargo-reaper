@@ -29,7 +29,7 @@ jobs:
             extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
 
       - name: Install and configure Cachix
-        uses: cachix/cachix-action@v16
+        uses: cachix/cachix-action@v17
         with:
           name: cloud-scythe-labs
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
