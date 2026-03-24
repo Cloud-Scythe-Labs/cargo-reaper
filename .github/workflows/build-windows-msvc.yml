@@ -8,7 +8,7 @@ jobs:
     name: Build Windows MSVC
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Rust
         run: | 
@@ -17,7 +17,7 @@ jobs:
           cargo --version
 
       - name: Cache Cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -27,7 +27,7 @@ jobs:
             cargo-registry-${{ runner.os }}-
 
       - name: Cache Cargo dependencies (compiled)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             target
