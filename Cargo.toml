@@ -40,5 +40,5 @@ serde = "1"
 tempfile = "3.19"
 toml = "0.8"
 toml_edit = "0.22"
-which = "7.0"
+which = "8.0"
 whoami = { version = "1.6", default-features = false }
