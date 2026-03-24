@@ -74,7 +74,7 @@ where
     pub(crate) fn emit(self) -> anyhow::Result<()> {
         if !self.errors.is_empty() {
             for error in self.errors.iter().rev() {
-                term::emit(
+                term::emit_to_write_style(
                     &mut termcolor::StandardStream::stderr(termcolor::ColorChoice::Auto),
                     &Default::default(),
                     &self.db,
