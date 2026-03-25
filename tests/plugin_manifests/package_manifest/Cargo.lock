@@ -348,7 +348,7 @@ dependencies = [
 [[package]]
 name = "reaper-common-types"
 version = "0.1.0"
-source = "git+https://github.com/helgoboss/reaper-rs.git?branch=master#218ff0806fcdc90c73d10dc82f062cec04957e6c"
+source = "git+https://github.com/Cloud-Scythe-Labs/reaper-rs.git?branch=eureka-cpu%2Fmissing-headers#be56e2dd67e214e25cf427c6f93fb0a0d756b8e2"
 dependencies = [
  "nutype",
  "serde",
@@ -357,7 +357,7 @@ dependencies = [
 [[package]]
 name = "reaper-low"
 version = "0.1.0"
-source = "git+https://github.com/helgoboss/reaper-rs.git?branch=master#218ff0806fcdc90c73d10dc82f062cec04957e6c"
+source = "git+https://github.com/Cloud-Scythe-Labs/reaper-rs.git?branch=eureka-cpu%2Fmissing-headers#be56e2dd67e214e25cf427c6f93fb0a0d756b8e2"
 dependencies = [
  "c_str_macro",
  "cc",
@@ -373,7 +373,7 @@ dependencies = [
 [[package]]
 name = "reaper-macros"
 version = "0.1.0"
-source = "git+https://github.com/helgoboss/reaper-rs.git?branch=master#218ff0806fcdc90c73d10dc82f062cec04957e6c"
+source = "git+https://github.com/Cloud-Scythe-Labs/reaper-rs.git?branch=eureka-cpu%2Fmissing-headers#be56e2dd67e214e25cf427c6f93fb0a0d756b8e2"
 dependencies = [
  "darling",
  "quote",
@@ -383,7 +383,7 @@ dependencies = [
 [[package]]
 name = "reaper-medium"
 version = "0.1.0"
-source = "git+https://github.com/helgoboss/reaper-rs.git?branch=master#218ff0806fcdc90c73d10dc82f062cec04957e6c"
+source = "git+https://github.com/Cloud-Scythe-Labs/reaper-rs.git?branch=eureka-cpu%2Fmissing-headers#be56e2dd67e214e25cf427c6f93fb0a0d756b8e2"
 dependencies = [
  "camino",
  "derive_more",
