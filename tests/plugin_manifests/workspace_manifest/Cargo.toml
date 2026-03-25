@@ -11,7 +11,7 @@ resolver = "2"
 members = ["src/*"]
 
 [workspace.dependencies]
-reaper-medium = { git = "https://github.com/helgoboss/reaper-rs.git", branch = "master" }
-reaper-low = { git = "https://github.com/helgoboss/reaper-rs.git", branch = "master" }
-reaper-macros = { git = "https://github.com/helgoboss/reaper-rs.git", branch = "master" }
 fragile = "2.0.1"
+reaper-low = { git = "https://github.com/Cloud-Scythe-Labs/reaper-rs.git", branch = "eureka-cpu/missing-headers" }
+reaper-macros = { git = "https://github.com/Cloud-Scythe-Labs/reaper-rs.git", branch = "eureka-cpu/missing-headers" }
+reaper-medium = { git = "https://github.com/Cloud-Scythe-Labs/reaper-rs.git", branch = "eureka-cpu/missing-headers" }
