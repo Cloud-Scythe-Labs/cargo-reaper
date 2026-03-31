@@ -320,7 +320,7 @@
                 inherit (scripts) mkCargoReaperDryRun;
               };
             in
-            pkgs.nixosTest {
+            pkgs.testers.nixosTest {
               name = "test-cargo-reaper-link";
               inherit (tests) nodes;
               testScript = tests.test-cargo-reaper-link {
@@ -344,7 +344,7 @@
                 ];
               };
             in
-            pkgs.nixosTest {
+            pkgs.testers.nixosTest {
               name = "test-cargo-reaper-run";
               inherit (tests) nodes;
               testScript = tests.test-cargo-reaper-run rec {
@@ -361,7 +361,7 @@
                 inherit (scripts) mkCargoReaperDryRun;
               };
             in
-            pkgs.nixosTest {
+            pkgs.testers.nixosTest {
               name = "test-cargo-reaper-clean";
               inherit (tests) nodes;
               testScript = tests.test-cargo-reaper-clean {
