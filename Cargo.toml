@@ -33,7 +33,7 @@ clap_complete = "4.5"
 codespan-reporting = "0.13"
 colored = "3"
 dirs = "6"
-gix = { version = "0.82", default-features = false, features = ["sha1"] }
+gix = { version = "0.83", default-features = false, features = ["sha1"] }
 humantime = "2.2"
 include_dir = "0.7"
 serde = "1"
