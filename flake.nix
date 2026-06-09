@@ -370,6 +370,37 @@
                 plugin_name = "reaper_package_ext";
               };
             };
+          test-cargo-reaper-build-cross-windows =
+            let
+              target = "x86_64-pc-windows-gnu";
+              mingwCC = pkgs.pkgsCross.mingwW64.stdenv.cc;
+              rustWithWindowsTarget = fenix.packages.${system}.combine [
+                rustToolchain
+                fenix.packages.${system}.targets.${target}.latest.rust-std
+              ];
+              craneLibCross =
+                let base = (crane.mkLib pkgs).overrideToolchain rustWithWindowsTarget;
+                in base // (cargoReaper.crane { craneLib = base; });
+              crossArgs = {
+                src = testFileset ./tests/plugin_manifests/package_manifest;
+                strictDeps = true;
+                CARGO_BUILD_TARGET = target;
+                CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER =
+                  "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
+                nativeBuildInputs = [ mingwCC ];
+              };
+              cargoArtifactsCross = craneLibCross.buildDepsOnly crossArgs;
+            in
+            craneLibCross.buildReaperExtension (crossArgs // {
+              cargoArtifacts = cargoArtifactsCross;
+              package = "package_manifest";
+              plugin = "reaper_package_ext";
+              target = target;
+              doInstallCheck = true;
+              installCheckPhase = ''
+                test -f $out/lib/reaper_package_ext.dll
+              '';
+            });
         };
 
       packages = rec {
