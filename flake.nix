@@ -376,10 +376,10 @@
               mingwCC = pkgs.pkgsCross.mingw-ucrt-x86_64.stdenv.cc;
               rustWithWindowsTarget = fenix.packages.${system}.combine [
                 rustToolchain
-                (fenix.packages.${system}.toolchainOf {
+                (fenix.packages.${system}.targets.${target}.toolchainOf {
                   channel = "1.87.0";
                   sha256 = "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
-                }).targets.${target}.rust-std
+                }).rust-std
               ];
               craneLibCross =
                 let base = (crane.mkLib pkgs).overrideToolchain rustWithWindowsTarget;
