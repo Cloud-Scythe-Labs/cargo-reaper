@@ -372,11 +372,14 @@
             };
           test-cargo-reaper-build-cross-windows =
             let
-              target = "x86_64-pc-windows-gnu";
-              mingwCC = pkgs.pkgsCross.mingwW64.stdenv.cc;
+              target = "x86_64-pc-windows-gnullvm";
+              mingwCC = pkgs.pkgsCross.mingw-ucrt-x86_64.stdenv.cc;
               rustWithWindowsTarget = fenix.packages.${system}.combine [
                 rustToolchain
-                fenix.packages.${system}.targets.${target}.latest.rust-std
+                (fenix.packages.${system}.toolchainOf {
+                  channel = "1.87.0";
+                  sha256 = "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
+                }).targets.${target}.rust-std
               ];
               craneLibCross =
                 let base = (crane.mkLib pkgs).overrideToolchain rustWithWindowsTarget;
@@ -385,7 +388,7 @@
                 src = testFileset ./tests/plugin_manifests/package_manifest;
                 strictDeps = true;
                 CARGO_BUILD_TARGET = target;
-                CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER =
+                CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_LINKER =
                   "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
                 nativeBuildInputs = [ mingwCC ];
               };
