@@ -36,7 +36,10 @@
     let
       pkgs = import nixpkgs {
         inherit system;
-        config.allowUnfree = true;
+        config = {
+          allowUnfree = true;
+          allowUnsupportedSystem = true;
+        };
       };
 
       inherit (pkgs) lib;
@@ -394,17 +397,18 @@
               crossArgs = {
                 src = testFileset ./tests/plugin_manifests/package_manifest;
                 strictDeps = true;
+
+                nativeBuildInputs = [
+                  mingwCC
+                  pkgs.llvmPackages.bintools
+                  pkgs.windows.pthreads
+                ];
+
                 CARGO_BUILD_TARGET = rustcTarget;
                 CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_LINKER =
                   "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
                 "CC_${rustcTarget}" = crossCC;
                 "CXX_${rustcTarget}" = crossCXX;
-
-                # # Force lld as the linker backend (required for gnullvm) and point it at
-                # # LLVM's libunwind compiled for Windows (also required by gnullvm).
-                # CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_RUSTFLAGS =
-                #   "-C link-arg=-fuse-ld=lld -C link-arg=-L${winUnwind}/lib";
-                nativeBuildInputs = [ mingwCC pkgs.llvmPackages.bintools crossPkgs.windows.pthreads ];
               };
               cargoArtifactsCross = craneLibCross.buildDepsOnly crossArgs;
             in
