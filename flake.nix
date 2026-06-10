@@ -373,7 +373,10 @@
           test-cargo-reaper-build-cross-windows =
             let
               target = "x86_64-pc-windows-gnullvm";
-              mingwCC = pkgs.pkgsCross.mingw-ucrt-x86_64.clangStdenv.cc;
+              crossPkgs = pkgs.pkgsCross.mingw-ucrt-x86_64;
+              mingwCC = crossPkgs.clangStdenv.cc;
+              # LLVM libunwind compiled for Windows — required by the gnullvm target
+              winUnwind = crossPkgs.llvmPackages.libunwind;
               rustWithWindowsTarget = fenix.packages.${system}.combine [
                 rustToolchain
                 (fenix.packages.${system}.targets.${target}.toolchainOf {
@@ -390,7 +393,11 @@
                 CARGO_BUILD_TARGET = target;
                 CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_LINKER =
                   "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
-                nativeBuildInputs = [ mingwCC ];
+                # Force lld as the linker backend (required for gnullvm) and point it at
+                # LLVM's libunwind compiled for Windows (also required by gnullvm).
+                CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_RUSTFLAGS =
+                  "-C link-arg=-fuse-ld=lld -C link-arg=-L${winUnwind}/lib";
+                nativeBuildInputs = [ mingwCC pkgs.llvmPackages.lld ];
               };
               cargoArtifactsCross = craneLibCross.buildDepsOnly crossArgs;
             in
