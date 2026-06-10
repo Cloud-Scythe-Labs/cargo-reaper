@@ -372,7 +372,7 @@
             };
           test-cargo-reaper-build-cross-windows =
             let
-              inherit (pkgs.lib.systems.examples.mingw-ucrt-x86_64-llvm.rust) rustTarget;
+              inherit (pkgs.lib.systems.examples.mingw-ucrt-x86_64-llvm.rust) rustcTarget;
               crossPkgs = pkgs.pkgsCross.mingw-ucrt-x86_64-llvm;
               mingwCC = crossPkgs.stdenv.cc;
               crossCC = "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
@@ -380,7 +380,7 @@
 
               rustWithWindowsTarget = fenix.packages.${system}.combine [
                 rustToolchain
-                (fenix.packages.${system}.targets.${rustTarget}.toolchainOf {
+                (fenix.packages.${system}.targets.${rustcTarget}.toolchainOf {
                   channel = "1.87.0";
                   sha256 = "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
                 }).rust-std
@@ -394,11 +394,11 @@
               crossArgs = {
                 src = testFileset ./tests/plugin_manifests/package_manifest;
                 strictDeps = true;
-                CARGO_BUILD_TARGET = rustTarget;
+                CARGO_BUILD_TARGET = rustcTarget;
                 CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_LINKER =
                   "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
-                "CC_${rustTarget}" = crossCC;
-                "CXX_${rustTarget}" = crossCXX;
+                "CC_${rustcTarget}" = crossCC;
+                "CXX_${rustcTarget}" = crossCXX;
 
                 # # Force lld as the linker backend (required for gnullvm) and point it at
                 # # LLVM's libunwind compiled for Windows (also required by gnullvm).
@@ -412,7 +412,7 @@
               cargoArtifacts = cargoArtifactsCross;
               package = "package_manifest";
               plugin = "reaper_package_ext";
-              target = rustTarget;
+              target = rustcTarget;
               doInstallCheck = true;
               installCheckPhase = ''
                 test -f $out/lib/reaper_package_ext.dll
