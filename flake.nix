@@ -372,32 +372,39 @@
             };
           test-cargo-reaper-build-cross-windows =
             let
-              target = "x86_64-pc-windows-gnullvm";
+              inherit (pkgs.lib.systems.examples.mingw-ucrt-x86_64.rust) rustTarget;
               crossPkgs = pkgs.pkgsCross.mingw-ucrt-x86_64;
-              mingwCC = crossPkgs.clangStdenv.cc;
-              # LLVM libunwind compiled for Windows — required by the gnullvm target
-              winUnwind = crossPkgs.llvmPackages.libunwind;
+              mingwCC = crossPkgs.stdenv.cc;
+              crossCC = "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
+              crossCXX = "${mingwCC}/bin/${mingwCC.targetPrefix}c++";
+
               rustWithWindowsTarget = fenix.packages.${system}.combine [
                 rustToolchain
-                (fenix.packages.${system}.targets.${target}.toolchainOf {
+                (fenix.packages.${system}.targets.${rustTarget}.toolchainOf {
                   channel = "1.87.0";
                   sha256 = "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
                 }).rust-std
               ];
               craneLibCross =
-                let base = (crane.mkLib pkgs).overrideToolchain rustWithWindowsTarget;
-                in base // (cargoReaper.crane { craneLib = base; });
+                let
+                  craneLib = (crane.mkLib pkgs).overrideToolchain rustWithWindowsTarget;
+                in
+                craneLib // (cargoReaper.crane { inherit craneLib; });
+
               crossArgs = {
                 src = testFileset ./tests/plugin_manifests/package_manifest;
                 strictDeps = true;
-                CARGO_BUILD_TARGET = target;
+                CARGO_BUILD_TARGET = rustTarget;
                 CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_LINKER =
                   "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
-                # Force lld as the linker backend (required for gnullvm) and point it at
-                # LLVM's libunwind compiled for Windows (also required by gnullvm).
-                CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_RUSTFLAGS =
-                  "-C link-arg=-fuse-ld=lld -C link-arg=-L${winUnwind}/lib";
-                nativeBuildInputs = [ mingwCC pkgs.llvmPackages.lld ];
+                "CC_${rustTarget}" = crossCC;
+                "CXX_${rustTarget}" = crossCXX;
+
+                # # Force lld as the linker backend (required for gnullvm) and point it at
+                # # LLVM's libunwind compiled for Windows (also required by gnullvm).
+                # CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_RUSTFLAGS =
+                #   "-C link-arg=-fuse-ld=lld -C link-arg=-L${winUnwind}/lib";
+                nativeBuildInputs = [ mingwCC pkgs.llvmPackages.bintools ];
               };
               cargoArtifactsCross = craneLibCross.buildDepsOnly crossArgs;
             in
@@ -405,7 +412,7 @@
               cargoArtifacts = cargoArtifactsCross;
               package = "package_manifest";
               plugin = "reaper_package_ext";
-              target = target;
+              target = rustTarget;
               doInstallCheck = true;
               installCheckPhase = ''
                 test -f $out/lib/reaper_package_ext.dll
