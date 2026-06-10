@@ -373,7 +373,7 @@
           test-cargo-reaper-build-cross-windows =
             let
               target = "x86_64-pc-windows-gnullvm";
-              mingwCC = pkgs.pkgsCross.mingw-ucrt-x86_64.llvmPackages.clang;
+              mingwCC = pkgs.pkgsCross.mingw-ucrt-x86_64.clangStdenv.cc;
               rustWithWindowsTarget = fenix.packages.${system}.combine [
                 rustToolchain
                 (fenix.packages.${system}.targets.${target}.toolchainOf {
