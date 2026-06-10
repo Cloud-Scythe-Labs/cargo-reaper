@@ -400,11 +400,12 @@
 
                 nativeBuildInputs = [
                   mingwCC
+                  pkgs.wine64
                   pkgs.llvmPackages.bintools
                 ];
 
                 buildInputs = [
-                  crossPkgs.windows.pthreads
+                  pkgs.windows.pthreads
                 ];
 
                 CARGO_BUILD_TARGET = rustcTarget;
