@@ -404,7 +404,7 @@
                 # # LLVM's libunwind compiled for Windows (also required by gnullvm).
                 # CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_RUSTFLAGS =
                 #   "-C link-arg=-fuse-ld=lld -C link-arg=-L${winUnwind}/lib";
-                nativeBuildInputs = [ mingwCC pkgs.llvmPackages.bintools ];
+                nativeBuildInputs = [ mingwCC pkgs.llvmPackages.bintools crossPkgs.windows.pthreads ];
               };
               cargoArtifactsCross = craneLibCross.buildDepsOnly crossArgs;
             in
