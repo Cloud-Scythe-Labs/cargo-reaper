@@ -372,8 +372,8 @@
             };
           test-cargo-reaper-build-cross-windows =
             let
-              inherit (pkgs.lib.systems.examples.mingw-ucrt-x86_64.rust) rustTarget;
-              crossPkgs = pkgs.pkgsCross.mingw-ucrt-x86_64;
+              inherit (pkgs.lib.systems.examples.mingw-ucrt-x86_64-llvm.rust) rustTarget;
+              crossPkgs = pkgs.pkgsCross.mingw-ucrt-x86_64-llvm;
               mingwCC = crossPkgs.stdenv.cc;
               crossCC = "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
               crossCXX = "${mingwCC}/bin/${mingwCC.targetPrefix}c++";
