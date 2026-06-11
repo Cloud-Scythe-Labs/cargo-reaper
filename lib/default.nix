@@ -50,10 +50,6 @@ in
       fileset = (craneLib.fileset or { }) // fileset;
 
       buildReaperExtension = { package, plugin ? package, target ? null, ... }@crateArgs:
-        let
-          targetFlag = lib.optionalString (target != null) "--target ${target}";
-          artifactDir = if target != null then "target/${target}/release" else "target/release";
-        in
         craneLib.buildPackage (crateArgs // {
           pname = package;
           nativeBuildInputs = (crateArgs.nativeBuildInputs or [ ]) ++ [
@@ -66,12 +62,14 @@ in
           buildPhaseCargoCommand = ''
             cargo reaper build --no-symlink \
               -p ${package} --lib \
-              --release ${targetFlag}
+              --release ${lib.optionalString (target != null) ''\
+              --target ${target}
+            ''}
           '';
           # Include extension plugin in the build result.
           installPhaseCommand = ''
             mkdir -p $out/lib
-            mv ${artifactDir}/${plugin}.* $out/lib
+            mv target${lib.optionalString (target != null) "/${target}"}/release/${plugin}.* $out/lib
           '';
           # Bypass crane checks for target install paths.
           doNotPostBuildInstallCargoBinaries = true;

@@ -8,21 +8,6 @@ use crate::{
     },
 };
 
-/// Parse `--target <triple>` / `--target=<triple>` from args,
-/// falling back to the `CARGO_BUILD_TARGET` environment variable.
-fn parse_target(args: &[String]) -> Option<String> {
-    let mut iter = args.iter();
-    while let Some(arg) = iter.next() {
-        if arg == "--target" {
-            return iter.next().cloned();
-        }
-        if let Some(val) = arg.strip_prefix("--target=") {
-            return Some(val.to_owned());
-        }
-    }
-    env::var("CARGO_BUILD_TARGET").ok()
-}
-
 /// Build a REAPER extension plugin.
 pub(crate) fn build(no_symlink: bool, args: Vec<String>) -> anyhow::Result<()> {
     let project_root = find_project_root()?;
@@ -44,7 +29,7 @@ pub(crate) fn build(no_symlink: bool, args: Vec<String>) -> anyhow::Result<()> {
                 .find(|arg| *arg == "--release")
                 .map_or("debug", |_| "release");
 
-            let target_triple = parse_target(&args);
+            let target_triple = env::var("CARGO_BUILD_TARGET").ok();
             let target_os = target_triple
                 .as_deref()
                 .and_then(TargetOs::from_triple)
@@ -87,11 +72,11 @@ pub(crate) fn build(no_symlink: bool, args: Vec<String>) -> anyhow::Result<()> {
                         .join("target")
                         .join(triple)
                         .join(profile)
-                        .join(&from_lib_file_name),
+                        .join(&*from_lib_file_name),
                     None => project_root
                         .join("target")
                         .join(profile)
-                        .join(&from_lib_file_name),
+                        .join(&*from_lib_file_name),
                 };
 
                 if plugin_path.exists() {

@@ -53,6 +53,7 @@
         "cargo"
         "rustfmt"
         "clippy"
+        "rust-src"
         "rust-analyzer"
       ];
       craneLib =

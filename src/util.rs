@@ -1,4 +1,4 @@
-use std::{env, fmt, fs, io, path};
+use std::{borrow, env, fmt, fs, io, path};
 
 pub(crate) use colored::Colorize;
 
@@ -209,17 +209,13 @@ pub(crate) fn rename_plugin(
     old_plugin_path: &path::PathBuf,
     plugin_name_to: &str,
 ) -> anyhow::Result<path::PathBuf> {
-    let new_plugin_path = match target_triple {
-        Some(triple) => project_root
-            .join("target")
-            .join(triple)
-            .join(profile)
-            .join(plugin_name_to),
-        None => project_root
-            .join("target")
-            .join(profile)
-            .join(plugin_name_to),
-    };
+    let new_plugin_path = target_triple
+        .iter()
+        .fold(project_root.join("target"), |plugin_path, target_triple| {
+            plugin_path.join(target_triple)
+        })
+        .join(profile)
+        .join(plugin_name_to);
 
     fs::rename(old_plugin_path, &new_plugin_path)
         .map_err(|err| anyhow::anyhow!("failed to rename plugin: {err:?}"))?;
@@ -372,10 +368,10 @@ impl TargetOs {
 
     /// Applies the platform-appropriate library filename prefix transformation.
     /// Unix targets prepend `lib`; Windows does not.
-    pub(crate) fn plugin_file_name(&self, lib_name: &str) -> String {
+    pub(crate) fn plugin_file_name<'a>(&self, lib_name: &'a str) -> borrow::Cow<'a, str> {
         match self {
-            Self::Windows => lib_name.to_string(),
-            Self::Linux | Self::MacOs => format!("lib{lib_name}"),
+            Self::Windows => borrow::Cow::Borrowed(lib_name),
+            Self::Linux | Self::MacOs => borrow::Cow::Owned(format!("lib{lib_name}")),
         }
     }
 }
