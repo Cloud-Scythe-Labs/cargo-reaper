@@ -399,14 +399,13 @@
                 mingwCC
                 pkgs.wine64
               ];
-              buildInputs = [
-                crossPkgs.windows.pthreads
-              ];
               CARGO_BUILD_TARGET = rustcTarget;
               CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER =
                 "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
               "CC_${builtins.replaceStrings ["-"] ["_"] rustcTarget}" = crossCC;
               "CXX_${builtins.replaceStrings ["-"] ["_"] rustcTarget}" = crossCXX;
+              CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS =
+                "-L ${crossPkgs.windows.pthreads}/lib";
             };
             cargoArtifactsCross = craneLibCross.buildDepsOnly crossArgs;
           in
