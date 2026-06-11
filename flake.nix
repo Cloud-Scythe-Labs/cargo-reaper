@@ -399,6 +399,9 @@
                 mingwCC
                 pkgs.wine64
               ];
+              buildInputs = [
+                pkgs.windows.pthreads
+              ];
               CARGO_BUILD_TARGET = rustcTarget;
               CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER =
                 "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
