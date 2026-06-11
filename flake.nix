@@ -417,7 +417,7 @@
               doInstallCheck = true;
               installCheckPhase = ''
                 test -f $out/lib/reaper_package_ext.dll
-                file $out/lib/reaper_package_ext.dll
+                file $out/lib/reaper_package_ext.dll | grep -q "PE32+ executable (DLL) (GUI) x86-64, for MS Windows"
               '';
             });
         };
