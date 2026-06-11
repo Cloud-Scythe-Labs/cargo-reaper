@@ -54,8 +54,8 @@ impl PluginManifest {
 impl fmt::Display for PluginManifest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} v{}", self.name.blue(), self.version)?;
-        if self.description.is_some() {
-            write!(f, " -- {}", self.description.as_ref().unwrap())?;
+        if let Some(ref description) = self.description {
+            write!(f, " -- {}", description)?;
         }
         if !self.authors.is_empty() {
             write!(f, "\n\nAuthored by: {}", self.authors.join(", "))?;
@@ -337,14 +337,13 @@ pub(crate) enum TargetOs {
 }
 
 impl TargetOs {
-    /// Returns the host OS via compile-time `cfg!`. Used when no `--target` is present.
+    /// Returns the host OS via compile-time macro. Used when no `--target` is present.
     pub(crate) fn host() -> Self {
-        if cfg!(target_os = "windows") {
-            Self::Windows
-        } else if cfg!(target_os = "linux") {
-            Self::Linux
-        } else {
-            Self::MacOs
+        cfg_select! {
+           target_os = "windows" => Self::Windows,
+           target_os = "linux" => Self::Linux,
+           target_os = "macos" => Self::MacOs,
+           _ => compile_error!("Unsupported host platform"),
         }
     }
 

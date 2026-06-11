@@ -36,6 +36,7 @@
     let
       pkgs = import nixpkgs {
         inherit system;
+        overlays = [ fenix.overlays.default ];
         config = {
           allowUnfree = true;
           allowUnsupportedSystem = true;
@@ -48,10 +49,12 @@
         inherit (self.packages.${system}) cargo-reaper;
       };
 
-      rustToolchain = fenix.packages.${system}.fromToolchainFile {
-        file = ./.rust-toolchain.toml;
-        sha256 = "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
-      };
+      rustToolchain = pkgs.fenix.stable.withComponents [
+        "cargo"
+        "rustfmt"
+        "clippy"
+        "rust-analyzer"
+      ];
       craneLib =
         let
           craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
@@ -380,10 +383,7 @@
                 let
                   rustWithWindowsTarget = fenix.packages.${system}.combine [
                     rustToolchain
-                    (fenix.packages.${system}.targets.${rustcTarget}.toolchainOf {
-                      channel = "1.87.0";
-                      sha256 = "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
-                    }).rust-std
+                    fenix.packages.${system}.targets.${rustcTarget}.stable.rust-std
                   ];
                   craneLib = (crane.mkLib pkgs).overrideToolchain rustWithWindowsTarget;
                 in
