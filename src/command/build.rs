@@ -29,7 +29,12 @@ pub(crate) fn build(no_symlink: bool, args: Vec<String>) -> anyhow::Result<()> {
                 .find(|arg| *arg == "--release")
                 .map_or("debug", |_| "release");
 
-            let target_triple = env::var("CARGO_BUILD_TARGET").ok();
+            let target_triple = args
+                .iter()
+                .position(|arg| arg == "--target")
+                .and_then(|pos| args.get(pos + 1))
+                .cloned()
+                .or_else(|| env::var("CARGO_BUILD_TARGET").ok());
             let target_os = target_triple
                 .as_deref()
                 .and_then(TargetOs::from_triple)

@@ -221,7 +221,7 @@ pub(crate) fn rename_plugin(
         .map_err(|err| anyhow::anyhow!("failed to rename plugin: {err:?}"))?;
 
     println!(
-        "     {} {} → {}",
+        "     {} {} -> {}",
         "Renamed".green().bold(),
         old_plugin_path.display(),
         new_plugin_path.display()
@@ -281,7 +281,7 @@ where
         .map_err(|err| anyhow::anyhow!("failed to link extension plugin: {err:?}"))?;
 
     println!(
-        "     {} symbolic link {} → {}",
+        "     {} symbolic link {} -> {}",
         "Created".green().bold(),
         symlink_path.display(),
         plugin_path.display()

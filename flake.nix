@@ -402,7 +402,6 @@
                   nativeBuildInputs = [ mingwCC ];
                   "CC_${envTarget}" = "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
                   "CXX_${envTarget}" = "${mingwCC}/bin/${mingwCC.targetPrefix}c++";
-                  CARGO_BUILD_TARGET = rustcTarget;
                   CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
                   CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = "-L ${crossPkgs.windows.pthreads}/lib";
                 };
