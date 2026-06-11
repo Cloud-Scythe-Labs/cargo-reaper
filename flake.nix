@@ -417,7 +417,9 @@
               doInstallCheck = true;
               installCheckPhase = ''
                 test -f $out/lib/reaper_package_ext.dll
-                file $out/lib/reaper_package_ext.dll | grep -q "PE32+ executable (DLL) (GUI) x86-64, for MS Windows"
+                file_output=$(file $out/lib/reaper_package_ext.dll)
+                echo "$file_output"
+                echo "$file_output" | grep -q "PE32+ executable (DLL) (GUI) x86-64, for MS Windows" || (echo "ERROR: not a PE32+ binary"; exit 1)
               '';
             });
         };
