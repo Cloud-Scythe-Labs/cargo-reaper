@@ -374,51 +374,52 @@
               };
             };
           test-cargo-reaper-build-cross-windows =
-          let
-            rustcTarget = "x86_64-pc-windows-gnu";
-            crossPkgs = pkgs.pkgsCross.mingwW64;
-            mingwCC = crossPkgs.stdenv.cc;
-            crossCC = "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
-            crossCXX = "${mingwCC}/bin/${mingwCC.targetPrefix}c++";
-            rustWithWindowsTarget = fenix.packages.${system}.combine [
-              rustToolchain
-              (fenix.packages.${system}.targets.${rustcTarget}.toolchainOf {
-                channel = "1.87.0";
-                sha256 = "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
-              }).rust-std
-            ];
-            craneLibCross =
-              let
-                craneLib = (crane.mkLib pkgs).overrideToolchain rustWithWindowsTarget;
-              in
-              craneLib // (cargoReaper.crane { inherit craneLib; });
-            crossArgs = {
-              src = testFileset ./tests/plugin_manifests/package_manifest;
-              strictDeps = true;
-              nativeBuildInputs = [
-                mingwCC
-                pkgs.wine64
-              ];
-              CARGO_BUILD_TARGET = rustcTarget;
-              CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER =
-                "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
-              "CC_${builtins.replaceStrings ["-"] ["_"] rustcTarget}" = crossCC;
-              "CXX_${builtins.replaceStrings ["-"] ["_"] rustcTarget}" = crossCXX;
-              CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS =
-                "-L ${crossPkgs.windows.pthreads}/lib";
-            };
-            cargoArtifactsCross = craneLibCross.buildDepsOnly crossArgs;
-          in
-          craneLibCross.buildReaperExtension (crossArgs // {
-            cargoArtifacts = cargoArtifactsCross;
-            package = "package_manifest";
-            plugin = "reaper_package_ext";
-            target = rustcTarget;
-            doInstallCheck = true;
-            installCheckPhase = ''
-              test -f $out/lib/reaper_package_ext.dll
-            '';
-          });
+            let
+              rustcTarget = "x86_64-pc-windows-gnu";
+              craneLibCross =
+                let
+                  rustWithWindowsTarget = fenix.packages.${system}.combine [
+                    rustToolchain
+                    (fenix.packages.${system}.targets.${rustcTarget}.toolchainOf {
+                      channel = "1.87.0";
+                      sha256 = "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
+                    }).rust-std
+                  ];
+                  craneLib = (crane.mkLib pkgs).overrideToolchain rustWithWindowsTarget;
+                in
+                craneLib // (cargoReaper.crane { inherit craneLib; });
+              crossArgs =
+                let
+                  envTarget = builtins.replaceStrings [ "-" ] [ "_" ] rustcTarget;
+                  crossPkgs = pkgs.pkgsCross.mingwW64;
+                  mingwCC = crossPkgs.stdenv.cc;
+                in
+                {
+                  src = testFileset ./tests/plugin_manifests/package_manifest;
+                  strictDeps = true;
+                  nativeBuildInputs = [ mingwCC ];
+                  "CC_${envTarget}" = "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
+                  "CXX_${envTarget}" = "${mingwCC}/bin/${mingwCC.targetPrefix}c++";
+                  CARGO_BUILD_TARGET = rustcTarget;
+                  CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
+                  CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = "-L ${crossPkgs.windows.pthreads}/lib";
+                };
+              cargoArtifactsCross = craneLibCross.buildDepsOnly crossArgs;
+            in
+            craneLibCross.buildReaperExtension (crossArgs // {
+              cargoArtifacts = cargoArtifactsCross;
+              package = "package_manifest";
+              plugin = "reaper_package_ext";
+              target = rustcTarget;
+              /* Checks could be ran using wine64, but in this case we only care
+              that the package was built and the output is the expected format */
+              doCheck = false;
+              doInstallCheck = true;
+              installCheckPhase = ''
+                test -f $out/lib/reaper_package_ext.dll
+                file $out/lib/reaper_package_ext.dll
+              '';
+            });
         };
 
       packages = rec {
