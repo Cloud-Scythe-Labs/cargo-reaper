@@ -46,6 +46,7 @@
       inherit (pkgs) lib;
       cargoReaper = self.mkLib {
         inherit lib;
+        inherit (pkgs) stdenv;
         inherit (self.packages.${system}) cargo-reaper;
       };
 
@@ -108,8 +109,6 @@
           commonTestArgs = src: {
             inherit src;
             strictDeps = true;
-          } // lib.optionalAttrs pkgs.stdenv.isLinux {
-            LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
           };
 
           testFileset = root: lib.fileset.toSource {
