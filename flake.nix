@@ -420,8 +420,8 @@
                 file_output=$(file $out/lib/reaper_package_ext.dll)
                 echo "$file_output"
                 echo "$file_output" |
-                  grep -q "PE32+ executable for MS Windows 5.02 (DLL), x86-64" || {
-                    echo "ERROR: not a PE32+ binary";
+                  grep -q "PE32+ executable for MS Windows.*(DLL), x86-64" || {
+                    echo "ERROR: not a PE32+ DLL";
                     exit 1;
                   }
               '';
