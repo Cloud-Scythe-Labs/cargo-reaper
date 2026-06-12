@@ -394,26 +394,27 @@
               crossArgs =
                 let
                   envTarget = builtins.replaceStrings [ "-" ] [ "_" ] rustcTarget;
+                  envTargetUpper = lib.toUpper envTarget;
                   winSdk = pkgs.windows.sdk;
                   llvm = pkgs.llvmPackages;
+                  # Flags forwarded to clang-cl by cc-rs so it can locate MSVC headers and libs.
+                  sdkCompilerFlags = "/vctoolsdir ${winSdk}/crt /winsdkdir ${winSdk}/sdk";
                 in
                 {
                   src = testFileset ./tests/plugin_manifests/package_manifest;
                   strictDeps = true;
                   nativeBuildInputs = [
-                    llvm.clang-unwrapped
-                    llvm.bintools-unwrapped
-                    llvm.llvm
+                    llvm.clang-unwrapped # clang-cl (C/C++ compiler)
+                    llvm.bintools-unwrapped # lld-link (linker)
+                    llvm.llvm # llvm-lib (MSVC lib.exe equivalent, used by cc-rs)
                   ];
                   "CC_${envTarget}" = "${llvm.clang-unwrapped}/bin/clang-cl";
                   "CXX_${envTarget}" = "${llvm.clang-unwrapped}/bin/clang-cl";
-                  # Pass SDK paths to clang-cl when the cc crate compiles C/C++ in build.rs scripts.
-                  "CFLAGS_${envTarget}" = "/vctoolsdir ${winSdk}/crt /winsdkdir ${winSdk}/sdk";
-                  "CXXFLAGS_${envTarget}" = "/vctoolsdir ${winSdk}/crt /winsdkdir ${winSdk}/sdk";
-                  # llvm-lib is the MSVC lib.exe equivalent; cc-rs invokes it with MSVC-style args.
+                  "CFLAGS_${envTarget}" = sdkCompilerFlags;
+                  "CXXFLAGS_${envTarget}" = sdkCompilerFlags;
                   "AR_${envTarget}" = "${llvm.llvm}/bin/llvm-lib";
-                  CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER = "${llvm.bintools-unwrapped}/bin/lld-link";
-                  CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS = lib.concatStringsSep " " [
+                  "CARGO_TARGET_${envTargetUpper}_LINKER" = "${llvm.bintools-unwrapped}/bin/lld-link";
+                  "CARGO_TARGET_${envTargetUpper}_RUSTFLAGS" = lib.concatStringsSep " " [
                     "-C link-arg=/LIBPATH:${winSdk}/crt/lib/x64"
                     "-C link-arg=/LIBPATH:${winSdk}/sdk/lib/ucrt/x64"
                     "-C link-arg=/LIBPATH:${winSdk}/sdk/lib/um/x64"
