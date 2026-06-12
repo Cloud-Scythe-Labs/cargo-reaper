@@ -40,6 +40,7 @@
         config = {
           allowUnfree = true;
           allowUnsupportedSystem = true;
+          microsoftVisualStudioLicenseAccepted = true;
         };
       };
 
@@ -380,7 +381,7 @@
             };
           test-cargo-reaper-build-cross-windows =
             let
-              rustcTarget = "x86_64-pc-windows-gnu";
+              rustcTarget = "x86_64-pc-windows-msvc";
               craneLibCross =
                 let
                   rustWithWindowsTarget = fenix.packages.${system}.combine [
@@ -393,17 +394,30 @@
               crossArgs =
                 let
                   envTarget = builtins.replaceStrings [ "-" ] [ "_" ] rustcTarget;
-                  crossPkgs = pkgs.pkgsCross.mingwW64;
-                  mingwCC = crossPkgs.stdenv.cc;
+                  winSdk = pkgs.windows.sdk;
+                  llvm = pkgs.llvmPackages;
                 in
                 {
                   src = testFileset ./tests/plugin_manifests/package_manifest;
                   strictDeps = true;
-                  nativeBuildInputs = [ mingwCC ];
-                  "CC_${envTarget}" = "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
-                  "CXX_${envTarget}" = "${mingwCC}/bin/${mingwCC.targetPrefix}c++";
-                  CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "${mingwCC}/bin/${mingwCC.targetPrefix}cc";
-                  CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = "-L ${crossPkgs.windows.pthreads}/lib";
+                  nativeBuildInputs = [
+                    llvm.clang-unwrapped
+                    llvm.bintools-unwrapped
+                    llvm.llvm
+                  ];
+                  "CC_${envTarget}" = "${llvm.clang-unwrapped}/bin/clang-cl";
+                  "CXX_${envTarget}" = "${llvm.clang-unwrapped}/bin/clang-cl";
+                  # Pass SDK paths to clang-cl when the cc crate compiles C/C++ in build.rs scripts.
+                  "CFLAGS_${envTarget}" = "/vctoolsdir ${winSdk}/crt /winsdkdir ${winSdk}/sdk";
+                  "CXXFLAGS_${envTarget}" = "/vctoolsdir ${winSdk}/crt /winsdkdir ${winSdk}/sdk";
+                  # llvm-lib is the MSVC lib.exe equivalent; cc-rs invokes it with MSVC-style args.
+                  "AR_${envTarget}" = "${llvm.llvm}/bin/llvm-lib";
+                  CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER = "${llvm.bintools-unwrapped}/bin/lld-link";
+                  CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS = lib.concatStringsSep " " [
+                    "-C link-arg=/LIBPATH:${winSdk}/crt/lib/x64"
+                    "-C link-arg=/LIBPATH:${winSdk}/sdk/lib/ucrt/x64"
+                    "-C link-arg=/LIBPATH:${winSdk}/sdk/lib/um/x64"
+                  ];
                 };
               cargoArtifactsCross = craneLibCross.buildDepsOnly crossArgs;
             in
