@@ -1,6 +1,5 @@
 { lib
 , cargo-reaper
-, stdenv ? null
 }:
 let
   fileset.cargoReaperConfigFilter = from: lib.fileset.fileFilter (file: (builtins.match "\.?reaper\.toml" file.name) != null) from;
@@ -29,7 +28,7 @@ in
                 let
                   craneLib = inputs.crane.mkLib pkgs;
                   cargoReaper = inputs.cargo-reaper.mkLib {
-                    inherit (pkgs) lib stdenv;
+                    inherit (pkgs) lib;
                     inherit (inputs.cargo-reaper.packages.''${system}) cargo-reaper;
                   };
                 in
@@ -74,14 +73,6 @@ in
           '';
           # Bypass crane checks for target install paths.
           doNotPostBuildInstallCargoBinaries = true;
-        } // lib.optionalAttrs (stdenv != null && stdenv.isLinux) {
-          # Rust 1.96+ uses lld with -nodefaultlibs, which means libstdc++ is no
-          # longer implicitly findable at runtime in the Nix sandbox for test binaries
-          # compiled by cargo during the check phase.
-          LD_LIBRARY_PATH = lib.concatStringsSep ":" (
-            lib.optional (crateArgs ? LD_LIBRARY_PATH) crateArgs.LD_LIBRARY_PATH
-              ++ [ (lib.makeLibraryPath [ stdenv.cc.cc.lib ]) ]
-          );
         });
     };
 

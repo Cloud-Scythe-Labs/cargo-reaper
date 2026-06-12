@@ -47,7 +47,6 @@
       inherit (pkgs) lib;
       cargoReaper = self.mkLib {
         inherit lib;
-        inherit (pkgs) stdenv;
         inherit (self.packages.${system}) cargo-reaper;
       };
 
@@ -110,6 +109,11 @@
           commonTestArgs = src: {
             inherit src;
             strictDeps = true;
+          } // lib.optionalAttrs pkgs.stdenv.isLinux {
+            # Rust 1.96+ uses lld with -nodefaultlibs, which means libstdc++ is no
+            # longer implicitly findable at runtime in the Nix sandbox for test binaries
+            # compiled by cargo during the check phase.
+            LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
           };
 
           testFileset = root: lib.fileset.toSource {
@@ -433,6 +437,7 @@
               doInstallCheck = true;
               installCheckPhase = ''
                 test -f $out/lib/reaper_package_ext.dll
+
                 file_output=$(file $out/lib/reaper_package_ext.dll)
                 echo "$file_output"
                 echo "$file_output" |
@@ -440,6 +445,18 @@
                     echo "ERROR: not a PE32+ DLL";
                     exit 1;
                   }
+
+                imports=$(llvm-objdump -p $out/lib/reaper_package_ext.dll | grep "DLL Name")
+                echo "$imports"
+                echo "$imports" | grep -q "VCRUNTIME140.dll" || {
+                  echo "ERROR: VCRUNTIME140.dll not imported (not an MSVC ABI DLL)";
+                  exit 1;
+                }
+                echo "$imports" | grep -qiE "libgcc|libstdc\+\+|msvcrt\.dll" && {
+                  echo "ERROR: MinGW runtime imported (not an MSVC ABI DLL)";
+                  exit 1;
+                }
+                true
               '';
             });
         };
