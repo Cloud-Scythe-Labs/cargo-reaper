@@ -203,31 +203,20 @@ where
 ///
 /// This is run automatically when running the `cargo reaper build` command.
 pub(crate) fn rename_plugin(
-    project_root: &path::Path,
-    target_triple: Option<&str>,
-    profile: &str,
-    old_plugin_path: &path::PathBuf,
-    plugin_name_to: &str,
+    plugin_path_from: &path::PathBuf,
+    plugin_path_to: path::PathBuf,
 ) -> anyhow::Result<path::PathBuf> {
-    let new_plugin_path = target_triple
-        .iter()
-        .fold(project_root.join("target"), |plugin_path, target_triple| {
-            plugin_path.join(target_triple)
-        })
-        .join(profile)
-        .join(plugin_name_to);
-
-    fs::rename(old_plugin_path, &new_plugin_path)
+    fs::rename(plugin_path_from, &plugin_path_to)
         .map_err(|err| anyhow::anyhow!("failed to rename plugin: {err:?}"))?;
 
     println!(
         "     {} {} -> {}",
         "Renamed".green().bold(),
-        old_plugin_path.display(),
-        new_plugin_path.display()
+        plugin_path_from.display(),
+        plugin_path_to.display()
     );
 
-    Ok(new_plugin_path)
+    Ok(plugin_path_to)
 }
 
 /// Symlink the REAPER extension plugin to the `UserPlugins` directory.

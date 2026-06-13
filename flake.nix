@@ -38,8 +38,11 @@
         inherit system;
         overlays = [ fenix.overlays.default ];
         config = {
-          allowUnfree = true;
-          allowUnsupportedSystem = true;
+          allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+            "reaper"
+            "win-sdk"
+            "xwin-fetch-msvc"
+          ];
           microsoftVisualStudioLicenseAccepted = true;
         };
       };
@@ -402,7 +405,10 @@
                   winSdk = pkgs.windows.sdk;
                   llvm = pkgs.llvmPackages;
                   # Flags forwarded to clang-cl by cc-rs so it can locate MSVC headers and libs.
-                  sdkCompilerFlags = "/vctoolsdir ${winSdk}/crt /winsdkdir ${winSdk}/sdk";
+                  sdkCompilerFlags = lib.concatStringsSep " " [
+                    "/vctoolsdir ${winSdk}/crt"
+                    "/winsdkdir ${winSdk}/sdk"
+                  ];
                 in
                 {
                   src = testFileset ./tests/plugin_manifests/package_manifest;
