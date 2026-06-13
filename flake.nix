@@ -400,34 +400,34 @@
                 craneLib // (cargoReaper.crane { inherit craneLib; });
               crossArgs =
                 let
+                  inherit (pkgs) llvmPackages windows;
                   envTarget = builtins.replaceStrings [ "-" ] [ "_" ] rustcTarget;
                   envTargetUpper = lib.toUpper envTarget;
-                  winSdk = pkgs.windows.sdk;
-                  llvm = pkgs.llvmPackages;
+                  CC = "${llvmPackages.clang-unwrapped}/bin/clang-cl";
                   # Flags forwarded to clang-cl by cc-rs so it can locate MSVC headers and libs.
-                  sdkCompilerFlags = lib.concatStringsSep " " [
-                    "/vctoolsdir ${winSdk}/crt"
-                    "/winsdkdir ${winSdk}/sdk"
+                  CFLAGS = lib.concatStringsSep " " [
+                    "/vctoolsdir ${windows.sdk}/crt"
+                    "/winsdkdir ${windows.sdk}/sdk"
                   ];
                 in
                 {
                   src = testFileset ./tests/plugin_manifests/package_manifest;
                   strictDeps = true;
-                  nativeBuildInputs = [
-                    llvm.clang-unwrapped # clang-cl (C/C++ compiler)
-                    llvm.bintools-unwrapped # lld-link (linker)
-                    llvm.llvm # llvm-lib (MSVC lib.exe equivalent, used by cc-rs)
+                  nativeBuildInputs = with llvmPackages; [
+                    clang-unwrapped # clang-cl (C/C++ compiler)
+                    bintools-unwrapped # lld-link (linker)
+                    llvm # llvm-lib (MSVC lib.exe equivalent, used by cc-rs)
                   ];
-                  "CC_${envTarget}" = "${llvm.clang-unwrapped}/bin/clang-cl";
-                  "CXX_${envTarget}" = "${llvm.clang-unwrapped}/bin/clang-cl";
-                  "CFLAGS_${envTarget}" = sdkCompilerFlags;
-                  "CXXFLAGS_${envTarget}" = sdkCompilerFlags;
-                  "AR_${envTarget}" = "${llvm.llvm}/bin/llvm-lib";
-                  "CARGO_TARGET_${envTargetUpper}_LINKER" = "${llvm.bintools-unwrapped}/bin/lld-link";
+                  "CC_${envTarget}" = CC;
+                  "CXX_${envTarget}" = CC;
+                  "CFLAGS_${envTarget}" = CFLAGS;
+                  "CXXFLAGS_${envTarget}" = CFLAGS;
+                  "AR_${envTarget}" = "${llvmPackages.llvm}/bin/llvm-lib";
+                  "CARGO_TARGET_${envTargetUpper}_LINKER" = "${llvmPackages.bintools-unwrapped}/bin/lld-link";
                   "CARGO_TARGET_${envTargetUpper}_RUSTFLAGS" = lib.concatStringsSep " " [
-                    "-C link-arg=/LIBPATH:${winSdk}/crt/lib/x64"
-                    "-C link-arg=/LIBPATH:${winSdk}/sdk/lib/ucrt/x64"
-                    "-C link-arg=/LIBPATH:${winSdk}/sdk/lib/um/x64"
+                    "-C link-arg=/LIBPATH:${windows.sdk}/crt/lib/x64"
+                    "-C link-arg=/LIBPATH:${windows.sdk}/sdk/lib/ucrt/x64"
+                    "-C link-arg=/LIBPATH:${windows.sdk}/sdk/lib/um/x64"
                   ];
                 };
               cargoArtifactsCross = craneLibCross.buildDepsOnly crossArgs;
