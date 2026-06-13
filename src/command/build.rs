@@ -72,17 +72,13 @@ pub(crate) fn build(no_symlink: bool, args: Vec<String>) -> anyhow::Result<()> {
                 let to_lib_name_with_ext = target_os.add_plugin_ext(to_plugin_file_name.as_ref());
 
                 // Cross builds land in target/{triple}/{profile}/; native in target/{profile}/
-                let plugin_path = match target_triple.as_deref() {
-                    Some(triple) => project_root
-                        .join("target")
-                        .join(triple)
-                        .join(profile)
-                        .join(&*from_lib_file_name),
-                    None => project_root
-                        .join("target")
-                        .join(profile)
-                        .join(&*from_lib_file_name),
-                };
+                let plugin_path = target_triple
+                    .iter()
+                    .fold(project_root.join("target"), |plugin_path, target_triple| {
+                        plugin_path.join(target_triple)
+                    })
+                    .join(profile)
+                    .join(&*from_lib_file_name);
 
                 if plugin_path.exists() {
                     let plugin_path = rename_plugin(
