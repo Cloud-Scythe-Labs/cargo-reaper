@@ -1,6 +1,6 @@
 [package]
 name = "cargo-reaper"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Cloud Scythe Labs <cloudscythelabs@gmail.com>"]
 description = "A Cargo plugin for developing REAPER extension and VST plugins with Rust."
 build = "build.rs"
