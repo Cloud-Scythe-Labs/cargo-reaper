@@ -36,7 +36,15 @@
     let
       pkgs = import nixpkgs {
         inherit system;
-        config.allowUnfree = true;
+        overlays = [ fenix.overlays.default ];
+        config = {
+          allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+            "reaper"
+            "win-sdk"
+            "xwin-fetch-msvc"
+          ];
+          microsoftVisualStudioLicenseAccepted = true;
+        };
       };
 
       inherit (pkgs) lib;
@@ -45,10 +53,13 @@
         inherit (self.packages.${system}) cargo-reaper;
       };
 
-      rustToolchain = fenix.packages.${system}.fromToolchainFile {
-        file = ./.rust-toolchain.toml;
-        sha256 = "sha256-KUm16pHj+cRedf8vxs/Hd2YWxpOrWZ7UOrwhILdSJBU=";
-      };
+      rustToolchain = pkgs.fenix.stable.withComponents [
+        "cargo"
+        "rustfmt"
+        "clippy"
+        "rust-src"
+        "rust-analyzer"
+      ];
       craneLib =
         let
           craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
@@ -101,6 +112,11 @@
           commonTestArgs = src: {
             inherit src;
             strictDeps = true;
+          } // lib.optionalAttrs pkgs.stdenv.isLinux {
+            # Rust 1.96+ uses lld with -nodefaultlibs, which means libstdc++ is no
+            # longer implicitly findable at runtime in the Nix sandbox for test binaries
+            # compiled by cargo during the check phase.
+            LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
           };
 
           testFileset = root: lib.fileset.toSource {
@@ -370,6 +386,87 @@
                 plugin_name = "reaper_package_ext";
               };
             };
+          test-cargo-reaper-build-cross-windows =
+            let
+              rustcTarget = "x86_64-pc-windows-msvc";
+              craneLibCross =
+                let
+                  rustWithWindowsTarget = fenix.packages.${system}.combine [
+                    rustToolchain
+                    fenix.packages.${system}.targets.${rustcTarget}.stable.rust-std
+                  ];
+                  craneLib = (crane.mkLib pkgs).overrideToolchain rustWithWindowsTarget;
+                in
+                craneLib // (cargoReaper.crane { inherit craneLib; });
+              crossArgs =
+                let
+                  inherit (pkgs) llvmPackages windows;
+                  envTarget = builtins.replaceStrings [ "-" ] [ "_" ] rustcTarget;
+                  envTargetUpper = lib.toUpper envTarget;
+                  CC = "${llvmPackages.clang-unwrapped}/bin/clang-cl";
+                  # Flags forwarded to clang-cl by cc-rs so it can locate MSVC headers and libs.
+                  CFLAGS = lib.concatStringsSep " " [
+                    "/vctoolsdir ${windows.sdk}/crt"
+                    "/winsdkdir ${windows.sdk}/sdk"
+                  ];
+                in
+                {
+                  src = testFileset ./tests/plugin_manifests/package_manifest;
+                  strictDeps = true;
+                  nativeBuildInputs = with llvmPackages; [
+                    clang-unwrapped # clang-cl (C/C++ compiler)
+                    bintools-unwrapped # lld-link (linker)
+                    llvm # llvm-lib (MSVC lib.exe equivalent, used by cc-rs)
+                  ];
+                  "CC_${envTarget}" = CC;
+                  "CXX_${envTarget}" = CC;
+                  "CFLAGS_${envTarget}" = CFLAGS;
+                  "CXXFLAGS_${envTarget}" = CFLAGS;
+                  "AR_${envTarget}" = "${llvmPackages.llvm}/bin/llvm-lib";
+                  "CARGO_TARGET_${envTargetUpper}_LINKER" = "${llvmPackages.bintools-unwrapped}/bin/lld-link";
+                  "CARGO_TARGET_${envTargetUpper}_RUSTFLAGS" = lib.concatStringsSep " " [
+                    "-C link-arg=/LIBPATH:${windows.sdk}/crt/lib/x64"
+                    "-C link-arg=/LIBPATH:${windows.sdk}/sdk/lib/ucrt/x64"
+                    "-C link-arg=/LIBPATH:${windows.sdk}/sdk/lib/um/x64"
+                  ];
+                };
+              cargoArtifactsCross = craneLibCross.buildDepsOnly crossArgs;
+            in
+            craneLibCross.buildReaperExtension (crossArgs // {
+              cargoArtifacts = cargoArtifactsCross;
+              package = "package_manifest";
+              plugin = "reaper_package_ext";
+              target = rustcTarget;
+              /* Checks could be ran using wine64, but in this case we only care
+              that the package was built and the output is the expected format */
+              doCheck = false;
+              doInstallCheck = true;
+              installCheckPhase = ''
+                test -f $out/lib/reaper_package_ext.dll
+
+                file_output=$(file $out/lib/reaper_package_ext.dll)
+                echo "$file_output"
+                echo "$file_output" |
+                  grep -q "PE32+ executable for MS Windows.*(DLL), x86-64" || {
+                    echo "ERROR: not a PE32+ DLL";
+                    exit 1;
+                  }
+
+                imports=$(llvm-objdump -p $out/lib/reaper_package_ext.dll | grep "DLL Name")
+                echo "$imports"
+                echo "$imports" |
+                  grep -q "VCRUNTIME140.dll" || {
+                    echo "ERROR: VCRUNTIME140.dll not imported (not an MSVC ABI DLL)";
+                    exit 1;
+                  }
+                echo "$imports" |
+                  grep -qiE "libgcc|libstdc\+\+|msvcrt\.dll" && {
+                    echo "ERROR: MinGW runtime imported (not an MSVC ABI DLL)";
+                    exit 1;
+                  }
+                true
+              '';
+            });
         };
 
       packages = rec {

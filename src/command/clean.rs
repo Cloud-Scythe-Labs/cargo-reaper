@@ -3,10 +3,7 @@ use std::{collections, fs, path, process};
 use crate::{
     config::ReaperPluginConfig,
     error::TomlErrorEmitter,
-    util::{
-        Colorize, find_project_root,
-        os::{add_plugin_ext, remove_plugin_symlink},
-    },
+    util::{Colorize, TargetOs, find_project_root, os::remove_plugin_symlink},
 };
 
 /// Remove extension plugins from the `UserPlugins` directory.
@@ -42,8 +39,11 @@ pub(crate) fn clean(
     let mut removal_failures = 0;
     for plugin_name in plugins.keys() {
         println!("    {} {}", "Removing".magenta().bold(), plugin_name);
-        if let Err(err) = remove_plugin_symlink(plugin_name, &add_plugin_ext(plugin_name), dry_run)
-        {
+        if let Err(err) = remove_plugin_symlink(
+            plugin_name,
+            &TargetOs::add_plugin_ext(&TargetOs::host(), plugin_name),
+            dry_run,
+        ) {
             removal_failures += 1;
             eprintln!("{}: {err}", "error (benign)".magenta());
         }

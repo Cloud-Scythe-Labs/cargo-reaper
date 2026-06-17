@@ -1,4 +1,4 @@
-use std::{env, fmt, fs, io, path};
+use std::{borrow, env, fmt, fs, io, path};
 
 pub(crate) use colored::Colorize;
 
@@ -54,8 +54,8 @@ impl PluginManifest {
 impl fmt::Display for PluginManifest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} v{}", self.name.blue(), self.version)?;
-        if self.description.is_some() {
-            write!(f, " -- {}", self.description.as_ref().unwrap())?;
+        if let Some(ref description) = self.description {
+            write!(f, " -- {}", description)?;
         }
         if !self.authors.is_empty() {
             write!(f, "\n\nAuthored by: {}", self.authors.join(", "))?;
@@ -194,33 +194,29 @@ where
 
 /// Rename the resulting extension plugin, returning the new plugin path if it succeeds.
 ///
+/// When `target_triple` is `Some`, the artifact lives in `target/{triple}/{profile}/`;
+/// when `None`, it lives in `target/{profile}/` (native/host build).
+///
 /// > Note: This function is platform agnostic
 ///
 /// # Usage
 ///
 /// This is run automatically when running the `cargo reaper build` command.
-pub(crate) fn _rename_plugin(
-    project_root: &path::Path,
-    profile: &str,
-    old_plugin_path: &path::PathBuf,
-    plugin_name_to: &str,
+pub(crate) fn rename_plugin(
+    plugin_path_from: &path::PathBuf,
+    plugin_path_to: path::PathBuf,
 ) -> anyhow::Result<path::PathBuf> {
-    let new_plugin_path = project_root
-        .join("target")
-        .join(profile)
-        .join(plugin_name_to);
-
-    fs::rename(old_plugin_path, &new_plugin_path)
+    fs::rename(plugin_path_from, &plugin_path_to)
         .map_err(|err| anyhow::anyhow!("failed to rename plugin: {err:?}"))?;
 
     println!(
-        "     {} {} → {}",
+        "     {} {} -> {}",
         "Renamed".green().bold(),
-        old_plugin_path.display(),
-        new_plugin_path.display()
+        plugin_path_from.display(),
+        plugin_path_to.display()
     );
 
-    Ok(new_plugin_path)
+    Ok(plugin_path_to)
 }
 
 /// Symlink the REAPER extension plugin to the `UserPlugins` directory.
@@ -274,7 +270,7 @@ where
         .map_err(|err| anyhow::anyhow!("failed to link extension plugin: {err:?}"))?;
 
     println!(
-        "     {} symbolic link {} → {}",
+        "     {} symbolic link {} -> {}",
         "Created".green().bold(),
         symlink_path.display(),
         plugin_path.display()
@@ -314,6 +310,61 @@ pub(crate) fn _remove_plugin_symlink(
     )
 }
 
+/// Runtime representation of the plugin target operating system.
+///
+/// Unlike the `os` module functions which are selected at compile time via `#[cfg(target_os)]`,
+/// this type is constructed at runtime from the `--target` triple, enabling cross-compilation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TargetOs {
+    Windows,
+    Linux,
+    MacOs,
+}
+
+impl TargetOs {
+    /// Returns the host OS via compile-time macro. Used when no `--target` is present.
+    pub(crate) fn host() -> Self {
+        cfg_select! {
+           target_os = "windows" => Self::Windows,
+           target_os = "linux" => Self::Linux,
+           target_os = "macos" => Self::MacOs,
+           _ => compile_error!("Unsupported host platform"),
+        }
+    }
+
+    /// Parses from a Rust target triple (e.g. `"x86_64-pc-windows-msvc"`).
+    /// Returns `None` for unrecognized triples; callers should fall back to `host()`.
+    pub(crate) fn from_triple(triple: &str) -> Option<Self> {
+        if triple.contains("windows") {
+            Some(Self::Windows)
+        } else if triple.contains("linux") {
+            Some(Self::Linux)
+        } else if triple.contains("darwin") || triple.contains("apple") {
+            Some(Self::MacOs)
+        } else {
+            None
+        }
+    }
+
+    /// Appends the platform-appropriate dynamic library file extension.
+    pub(crate) fn add_plugin_ext(&self, lib_name: &str) -> String {
+        match self {
+            Self::Windows => format!("{lib_name}.dll"),
+            Self::Linux => format!("{lib_name}.so"),
+            Self::MacOs => format!("{lib_name}.dylib"),
+        }
+    }
+
+    /// Applies the platform-appropriate library filename prefix transformation.
+    /// Unix targets prepend `lib`; Windows does not.
+    pub(crate) fn plugin_file_name<'a>(&self, lib_name: &'a str) -> borrow::Cow<'a, str> {
+        match self {
+            Self::Windows => borrow::Cow::Borrowed(lib_name),
+            Self::Linux | Self::MacOs => borrow::Cow::Owned(format!("lib{lib_name}")),
+        }
+    }
+}
+
 #[cfg(target_os = "windows")]
 pub(crate) mod os {
     //! Operating system specific functionality for handling operations which require knownledge of
@@ -321,10 +372,7 @@ pub(crate) mod os {
 
     use std::{io, os, path};
 
-    use super::{_locate_global_default, _remove_plugin_symlink, _rename_plugin, _symlink_plugin};
-
-    /// The dynamically linked C library Windows extension
-    pub(crate) const WINDOWS_PLUGIN_EXT: &str = ".dll";
+    use super::{_locate_global_default, _remove_plugin_symlink, _symlink_plugin};
 
     /// The global default REAPER executable file path for `x86_64-windows` (64bit)
     #[cfg(target_arch = "x86_64")]
@@ -343,23 +391,6 @@ pub(crate) mod os {
             let reaper = path::PathBuf::from(GLOBAL_DEFAULT_PATH);
             (reaper.exists()).then_some(reaper)
         })
-    }
-
-    pub(crate) fn from_plugin_file_name(lib_name: &str) -> String {
-        lib_name.to_string()
-    }
-
-    pub(crate) fn add_plugin_ext(lib_name: &str) -> String {
-        format!("{lib_name}{WINDOWS_PLUGIN_EXT}")
-    }
-
-    pub(crate) fn rename_plugin(
-        project_root: &path::Path,
-        profile: &str,
-        old_plugin_path: &path::PathBuf,
-        plugin_name_to: &str,
-    ) -> anyhow::Result<path::PathBuf> {
-        _rename_plugin(project_root, profile, old_plugin_path, plugin_name_to)
     }
 
     pub(crate) fn symlink_plugin(plugin_path: &path::PathBuf) -> anyhow::Result<()> {
@@ -408,33 +439,10 @@ pub(crate) mod os {
 
     use std::{io, os, path};
 
-    use super::{
-        _locate_global_default, _remove_plugin_symlink, _rename_plugin, _symlink_plugin,
-        BINARY_NAME,
-    };
-
-    /// The dynamically linked C library Linux extension
-    pub(crate) const LINUX_PLUGIN_EXT: &str = ".so";
+    use super::{_locate_global_default, _remove_plugin_symlink, _symlink_plugin, BINARY_NAME};
 
     pub(crate) fn locate_global_default() -> io::Result<path::PathBuf> {
         _locate_global_default(|| which::which_global(BINARY_NAME).ok())
-    }
-
-    pub(crate) fn from_plugin_file_name(lib_name: &str) -> String {
-        format!("lib{lib_name}")
-    }
-
-    pub(crate) fn add_plugin_ext(lib_name: &str) -> String {
-        format!("{lib_name}{LINUX_PLUGIN_EXT}")
-    }
-
-    pub(crate) fn rename_plugin(
-        project_root: &path::Path,
-        profile: &str,
-        old_plugin_path: &path::PathBuf,
-        plugin_name_to: &str,
-    ) -> anyhow::Result<path::PathBuf> {
-        _rename_plugin(project_root, profile, old_plugin_path, plugin_name_to)
     }
 
     pub(crate) fn symlink_plugin(plugin_path: &path::PathBuf) -> anyhow::Result<()> {
@@ -472,13 +480,9 @@ pub(crate) mod os {
 
     use std::{io, os, path};
 
-    use super::{_locate_global_default, _remove_plugin_symlink, _rename_plugin, _symlink_plugin};
-
-    /// The dynamically linked C library MacOS (Darwin) extension
-    pub(crate) const DARWIN_PLUGIN_EXT: &str = ".dylib";
+    use super::{_locate_global_default, _remove_plugin_symlink, _symlink_plugin};
 
     /// The global default REAPER executable file path for `x86_64-darwin` (Intel) and `aarch64-darwin` (Apple Silicon)
-    #[cfg(target_os = "macos")]
     pub(crate) const GLOBAL_DEFAULT_PATH: &str = "/Applications/REAPER.app/Contents/MacOS/REAPER";
 
     pub(crate) fn locate_global_default() -> io::Result<path::PathBuf> {
@@ -486,23 +490,6 @@ pub(crate) mod os {
             let reaper = path::PathBuf::from(GLOBAL_DEFAULT_PATH);
             (reaper.exists()).then_some(reaper)
         })
-    }
-
-    pub(crate) fn from_plugin_file_name(lib_name: &str) -> String {
-        format!("lib{lib_name}")
-    }
-
-    pub(crate) fn add_plugin_ext(lib_name: &str) -> String {
-        format!("{lib_name}{DARWIN_PLUGIN_EXT}")
-    }
-
-    pub(crate) fn rename_plugin(
-        project_root: &path::Path,
-        profile: &str,
-        old_plugin_path: &path::PathBuf,
-        plugin_name_to: &str,
-    ) -> anyhow::Result<path::PathBuf> {
-        _rename_plugin(project_root, profile, old_plugin_path, plugin_name_to)
     }
 
     pub(crate) fn symlink_plugin(plugin_path: &path::PathBuf) -> anyhow::Result<()> {

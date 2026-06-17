@@ -59,6 +59,8 @@ pub enum CargoReaperCommand {
     /// Compile REAPER extension plugin(s).
     Build {
         /// Do not symlink plugin(s) to the `UserPlugins` directory.
+        ///
+        /// If a cross compilation target is specified this is unconditionally true.
         #[arg(long)]
         no_symlink: bool,
 
