@@ -454,14 +454,16 @@
 
                 imports=$(llvm-objdump -p $out/lib/reaper_package_ext.dll | grep "DLL Name")
                 echo "$imports"
-                echo "$imports" | grep -q "VCRUNTIME140.dll" || {
-                  echo "ERROR: VCRUNTIME140.dll not imported (not an MSVC ABI DLL)";
-                  exit 1;
-                }
-                echo "$imports" | grep -qiE "libgcc|libstdc\+\+|msvcrt\.dll" && {
-                  echo "ERROR: MinGW runtime imported (not an MSVC ABI DLL)";
-                  exit 1;
-                }
+                echo "$imports" |
+                  grep -q "VCRUNTIME140.dll" || {
+                    echo "ERROR: VCRUNTIME140.dll not imported (not an MSVC ABI DLL)";
+                    exit 1;
+                  }
+                echo "$imports" |
+                  grep -qiE "libgcc|libstdc\+\+|msvcrt\.dll" && {
+                    echo "ERROR: MinGW runtime imported (not an MSVC ABI DLL)";
+                    exit 1;
+                  }
                 true
               '';
             });
