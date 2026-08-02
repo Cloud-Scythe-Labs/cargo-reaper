@@ -32,7 +32,7 @@
         (final: prev:
           let
             inherit (prev) lib;
-            cargoReaper = self.mkLib {
+            cargoReaperLib = self.mkLib {
               inherit lib;
               inherit (final) cargo-reaper;
             };
@@ -48,7 +48,7 @@
               let
                 craneLib = (crane.mkLib prev).overrideToolchain rustToolchain;
               in
-              craneLib // (cargoReaper.crane { inherit craneLib; });
+              craneLib // (cargoReaperLib.crane { inherit craneLib; });
             src = craneLib.cleanCargoSource ./.;
 
             commonArgs = {
@@ -81,12 +81,16 @@
                   --zsh <($out/bin/cargo-reaper completions zsh)
               '';
               doCheck = false;
-              # Building the crate and the tests reuses these, so expose them on
-              # the package rather than polluting the top-level package set.
-              passthru = {
-                inherit cargoReaper craneLib commonArgs cargoArtifacts src rustToolchain;
-              };
             });
+
+            # This repo's `mkLib` output, extended with the concrete build context
+            # (toolchain, crane lib, common args, dependency artifacts) that the
+            # checks and dev shell reuse. Grouped under a single attribute instead
+            # of scattered across the package set; this overlay is internal, only
+            # ever applied by `pkgsFor`.
+            cargoReaper = cargoReaperLib // {
+              inherit craneLib commonArgs cargoArtifacts src rustToolchain;
+            };
           })
       ];
 
@@ -153,9 +157,9 @@
 
       checks = eachSystem (pkgs:
         let
-          inherit (pkgs) lib stdenv;
+          inherit (pkgs) lib stdenv cargoReaper;
           inherit (stdenv.hostPlatform) system;
-          inherit (pkgs.cargo-reaper) cargoReaper craneLib commonArgs cargoArtifacts src rustToolchain;
+          inherit (cargoReaper) craneLib commonArgs cargoArtifacts src rustToolchain;
 
           # `nixosTest`s always run their nodes on Linux. When these checks are
           # evaluated on Darwin the test *driver* runs locally (Darwin advertises
@@ -427,7 +431,7 @@
                 # A Rust toolchain is required to build the plugin from source in
                 # the VM; it must target the guest's Linux system.
                 environment.systemPackages = [
-                  guestPkgs.cargo-reaper.rustToolchain
+                  guestPkgs.cargoReaper.rustToolchain
                   guestPkgs.gcc
                 ];
               };
@@ -591,7 +595,7 @@
           inherit (pkgs.stdenv.hostPlatform) system;
         in
         {
-          default = pkgs.cargo-reaper.craneLib.devShell {
+          default = pkgs.cargoReaper.craneLib.devShell {
             checks = self.checks.${system};
             packages = with pkgs; [
               nil
