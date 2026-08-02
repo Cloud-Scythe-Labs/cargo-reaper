@@ -42,7 +42,7 @@
                   inherit (prev) lib;
                   cargoReaper = self.mkLib {
                     inherit lib;
-                    cargo-reaper = final.cargo-reaper;
+                    inherit (final) cargo-reaper;
                   };
 
                   rustToolchain = prev.fenix.stable.withComponents [
@@ -113,7 +113,6 @@
       checks = eachSystem (pkgs:
         let
           inherit (pkgs) lib system cargoReaper craneLib commonArgs cargoArtifacts src rustToolchain;
-          scripts = cargoReaper.scripts { inherit (pkgs) writeShellScriptBin; };
           commonTestArgs = src: {
             inherit src;
             strictDeps = true;
@@ -333,14 +332,10 @@
               mkdir -p $out
             '';
           };
-        } // lib.optionalAttrs pkgs.stdenv.isLinux {
+
           test-cargo-reaper-link =
             let
-              tests = import ./tests {
-                inherit pkgs;
-                inherit (self.packages.${system}) cargo-reaper;
-                inherit (scripts) mkCargoReaperDryRun;
-              };
+              tests = import ./tests { };
             in
             pkgs.testers.nixosTest {
               name = "test-cargo-reaper-link";
@@ -353,9 +348,6 @@
           test-cargo-reaper-run =
             let
               tests = import ./tests {
-                inherit pkgs;
-                inherit (self.packages.${system}) cargo-reaper;
-                inherit (scripts) mkCargoReaperDryRun;
                 imports = [
                   {
                     environment.systemPackages = [
@@ -377,11 +369,7 @@
             };
           test-cargo-reaper-clean =
             let
-              tests = import ./tests {
-                inherit pkgs;
-                inherit (self.packages.${system}) cargo-reaper;
-                inherit (scripts) mkCargoReaperDryRun;
-              };
+              tests = import ./tests { };
             in
             pkgs.testers.nixosTest {
               name = "test-cargo-reaper-clean";
@@ -392,6 +380,7 @@
                 plugin_name = "reaper_package_ext";
               };
             };
+        } // lib.optionalAttrs pkgs.stdenv.isLinux {
           test-cargo-reaper-build-cross-windows =
             let
               rustcTarget = "x86_64-pc-windows-msvc";

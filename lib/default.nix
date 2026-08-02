@@ -75,43 +75,4 @@ in
           doNotPostBuildInstallCargoBinaries = true;
         });
     };
-
-  # Scripts useful for testing REAPER extension plugins with `nixosTest`.
-  scripts = { writeShellScriptBin }:
-    {
-      # REAPER doesn't like to execute in the background, and NixOS Test invokes commands
-      # as root. To combat this, we change users based on machine before launching REAPER,
-      # using xvfb and xdotool to search for an error window before exiting successfully.
-      mkCargoReaperDryRun =
-        { user
-        , cargo-reaper
-        , xdotool
-        , xvfb-run
-        }:
-        writeShellScriptBin "cargo_reaper_dry_run" ''
-          function run_cargo_reaper() {
-              su - ${user} -c '${cargo-reaper}/bin/cargo-reaper run --release --offline &'
-              sleep 5
-
-              # In this case reaper is running as a subprocess of `cargo-reaper run`
-              # so we must find the process id manually in order to terminate it.
-              reaper_pid=$(pgrep -u ${user} -f 'reaper')
-              if [[ -z "$reaper_pid" ]]; then
-                  echo "REAPER process not found!"
-                  exit 1
-              fi
-              echo "REAPER is running with PID $reaper_pid"
-
-              error_window=$(${xdotool}/bin/xdotool search --name "$1")
-              if [[ -n "$error_window" ]]; then
-                  echo "found error window with ID: $error_window"
-                  exit 1
-              fi
-              kill $reaper_pid
-          }
-
-          echo "searching for error window title '$1'"
-          ${xvfb-run}/bin/xvfb-run -a sh -c "$(declare -f run_cargo_reaper); run_cargo_reaper \"\$1\"" _ "$1"
-        '';
-    };
 }

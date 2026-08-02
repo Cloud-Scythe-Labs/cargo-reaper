@@ -1,6 +1,4 @@
 { imports ? [ ]
-, cargo-reaper
-, mkCargoReaperDryRun
 , ...
 }:
 {
@@ -45,12 +43,7 @@
           reaper
           xdotool
           xvfb-run
-        ] ++ [
           cargo-reaper
-          (mkCargoReaperDryRun {
-            inherit user cargo-reaper;
-            inherit (pkgs) xdotool xvfb-run;
-          })
         ];
       };
   };
@@ -73,7 +66,7 @@
     corro.succeed("su - corro -c '${cargo-reaper}/bin/cargo-reaper run --no-build --headless --timeout 5s --stdout null --stderr null'");
     corro.succeed("su - root -c 'cp -r ${plugin_source}/* /home/corro/'")
     corro.succeed("su - root -c 'mkdir -p /home/corro/.cargo && cp -r ${plugin_vendor}/config.toml /home/corro/.cargo/'")
-    corro.succeed("cargo_reaper_dry_run \"${plugin_name} error\"")
+    corro.fail("su - corro -c '${cargo-reaper}/bin/cargo-reaper run --headless --keep-going --locate-window \"${plugin_name} error\" --timeout 5s --stdout null --stderr null -- --release --offline'")
   '';
 
   # Link the pre-built plugin using `cargo-reaper link` and
