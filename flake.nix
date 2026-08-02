@@ -12,8 +12,6 @@
       inputs.rust-analyzer-src.follows = "";
     };
 
-    flake-utils.url = "github:numtide/flake-utils";
-
     advisory-db = {
       url = "github:rustsec/advisory-db";
       flake = false;
@@ -25,89 +23,96 @@
     , nixpkgs
     , crane
     , fenix
-    , flake-utils
     , advisory-db
     , ...
     }:
-
-    { mkLib = import ./lib; } //
-
-    flake-utils.lib.eachDefaultSystem (system:
     let
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [ fenix.overlays.default ];
-        config = {
-          allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
-            "reaper"
-            "win-sdk"
-            "xwin-fetch-msvc"
-          ];
-          microsoftVisualStudioLicenseAccepted = true;
-        };
-      };
+      eachSystem = f: nixpkgs.lib.genAttrs [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+      ]
+        (system:
+          f (import nixpkgs {
+            inherit system;
+            overlays = [
+              fenix.overlays.default
+              (final: prev:
+                let
+                  inherit (prev) lib;
+                  cargoReaper = self.mkLib {
+                    inherit lib;
+                    cargo-reaper = final.cargo-reaper;
+                  };
 
-      inherit (pkgs) lib;
-      cargoReaper = self.mkLib {
-        inherit lib;
-        inherit (self.packages.${system}) cargo-reaper;
-      };
+                  rustToolchain = prev.fenix.stable.withComponents [
+                    "cargo"
+                    "rustfmt"
+                    "clippy"
+                    "rust-src"
+                    "rust-analyzer"
+                  ];
+                  craneLib =
+                    let
+                      craneLib = (crane.mkLib prev).overrideToolchain rustToolchain;
+                    in
+                    craneLib // (cargoReaper.crane {
+                      inherit craneLib;
+                    });
+                  src = craneLib.cleanCargoSource ./.;
 
-      rustToolchain = pkgs.fenix.stable.withComponents [
-        "cargo"
-        "rustfmt"
-        "clippy"
-        "rust-src"
-        "rust-analyzer"
-      ];
-      craneLib =
-        let
-          craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
-        in
-        craneLib // (cargoReaper.crane {
-          inherit craneLib;
-        });
-      src = craneLib.cleanCargoSource ./.;
+                  commonArgs = {
+                    inherit src;
+                    strictDeps = true;
 
-      # Common arguments can be set here to avoid repeating them later
-      commonArgs = {
-        inherit src;
-        strictDeps = true;
+                    nativeBuildInputs = with prev; [
+                      installShellFiles
+                    ] ++ lib.optionals stdenv.isLinux [
+                      autoPatchelfHook
+                    ];
 
-        nativeBuildInputs = with pkgs; [
-          installShellFiles
-        ] ++ lib.optionals stdenv.isLinux [
-          autoPatchelfHook
-        ];
+                    buildInputs = with prev; [
+                      libgcc
+                    ] ++ lib.optionals stdenv.isDarwin [
+                      libiconv
+                    ];
+                  };
 
-        buildInputs = with pkgs; [
-          libgcc
-        ] ++ lib.optionals stdenv.isDarwin [
-          libiconv
-        ];
-      };
+                  cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+                in
+                {
+                  inherit cargoReaper craneLib commonArgs cargoArtifacts src rustToolchain;
 
-      # Build *just* the cargo dependencies, so we can reuse
-      # all of that work (e.g. via cachix) when running in CI
-      cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-
-      # Build the actual crate itself, reusing the dependency
-      # artifacts from above.
-      cargo-reaper-drv = craneLib.buildPackage (commonArgs // {
-        inherit cargoArtifacts;
-        # NOTE: `installShellCompletion` only has support for Bash, Zsh and Fish
-        postInstall = ''
-          installShellCompletion --cmd cargo-reaper \
-            --bash <($out/bin/cargo-reaper completions bash) \
-            --fish <($out/bin/cargo-reaper completions fish) \
-            --zsh <($out/bin/cargo-reaper completions zsh)
-        '';
-        doCheck = false;
-      });
+                  cargo-reaper = craneLib.buildPackage (commonArgs // {
+                    inherit cargoArtifacts;
+                    # NOTE: `installShellCompletion` only has support for Bash, Zsh and Fish
+                    postInstall = ''
+                      installShellCompletion --cmd cargo-reaper \
+                        --bash <($out/bin/cargo-reaper completions bash) \
+                        --fish <($out/bin/cargo-reaper completions fish) \
+                        --zsh <($out/bin/cargo-reaper completions zsh)
+                    '';
+                    doCheck = false;
+                    passthru = { inherit craneLib cargoArtifacts; };
+                  });
+                })
+            ];
+            config = {
+              allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
+                "reaper"
+                "win-sdk"
+                "xwin-fetch-msvc"
+              ];
+              microsoftVisualStudioLicenseAccepted = true;
+            };
+          }));
     in
     {
-      checks =
+      mkLib = import ./lib;
+
+      checks = eachSystem (pkgs:
         let
+          inherit (pkgs) lib system cargoReaper craneLib commonArgs cargoArtifacts src rustToolchain;
           scripts = cargoReaper.scripts { inherit (pkgs) writeShellScriptBin; };
           commonTestArgs = src: {
             inherit src;
@@ -176,8 +181,9 @@
         in
         {
           # Build the crate as part of `nix flake check` for convenience
+          cargo-reaper = pkgs.cargo-reaper;
+
           inherit
-            cargo-reaper-drv
             test-cargo-reaper-build-package-manifest
             test-cargo-reaper-build-workspace-manifest
             test-cargo-reaper-build-workspace-package-manifest
@@ -467,41 +473,42 @@
                 true
               '';
             });
-        };
+        });
 
-      packages = rec {
-        cargo-reaper = cargo-reaper-drv;
-        default = cargo-reaper;
-      };
+      packages = eachSystem (pkgs: {
+        cargo-reaper = pkgs.cargo-reaper;
+        default = pkgs.cargo-reaper;
+      });
 
-      apps = rec {
-        cargo-reaper = flake-utils.lib.mkApp
-          {
-            drv = cargo-reaper-drv;
-          } // {
+      apps = eachSystem (pkgs: rec {
+        cargo-reaper = {
+          type = "app";
+          program = "${pkgs.cargo-reaper}/bin/cargo-reaper";
           meta = {
             homepage = "https://github.com/Cloud-Scythe-Labs/cargo-reaper/";
             description = "A Cargo plugin for developing REAPER extension plugins with Rust.";
-            license = lib.licenses.mit;
-            maintainers = with lib.maintainers; [ eureka-cpu ];
+            license = pkgs.lib.licenses.mit;
+            maintainers = with pkgs.lib.maintainers; [ eureka-cpu ];
           };
         };
         default = cargo-reaper;
-      };
+      });
 
-      devShells.default = craneLib.devShell {
-        checks = self.checks.${system};
-        packages = with pkgs; [
-          nil
-          nixpkgs-fmt
-          mdbook
-          self.packages.${system}.default
-          reaper
-        ] ++ lib.optionals pkgs.stdenv.isLinux [
-          xdotool
-        ];
-      };
+      devShells = eachSystem (pkgs: {
+        default = pkgs.craneLib.devShell {
+          checks = self.checks.${pkgs.system};
+          packages = with pkgs; [
+            nil
+            nixpkgs-fmt
+            mdbook
+            self.packages.${pkgs.system}.default
+            reaper
+          ] ++ lib.optionals stdenv.isLinux [
+            xdotool
+          ];
+        };
+      });
 
-      formatter = pkgs.nixpkgs-fmt;
-    });
+      formatter = eachSystem (pkgs: pkgs.nixpkgs-fmt);
+    };
 }
