@@ -27,100 +27,154 @@
     , ...
     }:
     let
+      overlays = [
+        fenix.overlays.default
+        (final: prev:
+          let
+            inherit (prev) lib;
+            cargoReaper = self.mkLib {
+              inherit lib;
+              inherit (final) cargo-reaper;
+            };
+
+            rustToolchain = prev.fenix.stable.withComponents [
+              "cargo"
+              "rustfmt"
+              "clippy"
+              "rust-src"
+              "rust-analyzer"
+            ];
+            craneLib =
+              let
+                craneLib = (crane.mkLib prev).overrideToolchain rustToolchain;
+              in
+              craneLib // (cargoReaper.crane { inherit craneLib; });
+            src = craneLib.cleanCargoSource ./.;
+
+            commonArgs = {
+              inherit src;
+              strictDeps = true;
+
+              nativeBuildInputs = with prev; [
+                installShellFiles
+              ] ++ lib.optionals stdenv.isLinux [
+                autoPatchelfHook
+              ];
+
+              buildInputs = with prev; [
+                libgcc
+              ] ++ lib.optionals stdenv.isDarwin [
+                libiconv
+              ];
+            };
+
+            cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+          in
+          {
+            cargo-reaper = craneLib.buildPackage (commonArgs // {
+              inherit cargoArtifacts;
+              # NOTE: `installShellCompletion` only has support for Bash, Zsh and Fish
+              postInstall = ''
+                installShellCompletion --cmd cargo-reaper \
+                  --bash <($out/bin/cargo-reaper completions bash) \
+                  --fish <($out/bin/cargo-reaper completions fish) \
+                  --zsh <($out/bin/cargo-reaper completions zsh)
+              '';
+              doCheck = false;
+              # Building the crate and the tests reuses these, so expose them on
+              # the package rather than polluting the top-level package set.
+              passthru = {
+                inherit cargoReaper craneLib commonArgs cargoArtifacts src rustToolchain;
+              };
+            });
+          })
+      ];
+
+      pkgsFor = system: import nixpkgs {
+        inherit system overlays;
+        config = {
+          allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
+            "reaper"
+            "win-sdk"
+            "xwin-fetch-msvc"
+          ];
+          microsoftVisualStudioLicenseAccepted = true;
+        };
+      };
+
       eachSystem = f: nixpkgs.lib.genAttrs [
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
       ]
-        (system:
-          f (import nixpkgs {
-            inherit system;
-            overlays = [
-              fenix.overlays.default
-              (final: prev:
-                let
-                  inherit (prev) lib;
-                  cargoReaper = self.mkLib {
-                    inherit lib;
-                    inherit (final) cargo-reaper;
-                  };
+        (system: f (pkgsFor system));
 
-                  rustToolchain = prev.fenix.stable.withComponents [
-                    "cargo"
-                    "rustfmt"
-                    "clippy"
-                    "rust-src"
-                    "rust-analyzer"
-                  ];
-                  craneLib =
-                    let
-                      craneLib = (crane.mkLib prev).overrideToolchain rustToolchain;
-                    in
-                    craneLib // (cargoReaper.crane {
-                      inherit craneLib;
-                    });
-                  src = craneLib.cleanCargoSource ./.;
-
-                  commonArgs = {
-                    inherit src;
-                    strictDeps = true;
-
-                    nativeBuildInputs = with prev; [
-                      installShellFiles
-                    ] ++ lib.optionals stdenv.isLinux [
-                      autoPatchelfHook
-                    ];
-
-                    buildInputs = with prev; [
-                      libgcc
-                    ] ++ lib.optionals stdenv.isDarwin [
-                      libiconv
-                    ];
-                  };
-
-                  cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-                in
-                {
-                  inherit cargoReaper craneLib commonArgs cargoArtifacts src rustToolchain;
-
-                  cargo-reaper = craneLib.buildPackage (commonArgs // {
-                    inherit cargoArtifacts;
-                    # NOTE: `installShellCompletion` only has support for Bash, Zsh and Fish
-                    postInstall = ''
-                      installShellCompletion --cmd cargo-reaper \
-                        --bash <($out/bin/cargo-reaper completions bash) \
-                        --fish <($out/bin/cargo-reaper completions fish) \
-                        --zsh <($out/bin/cargo-reaper completions zsh)
-                    '';
-                    doCheck = false;
-                    passthru = { inherit craneLib cargoArtifacts; };
-                  });
-                })
-            ];
-            config = {
-              allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
-                "reaper"
-                "win-sdk"
-                "xwin-fetch-msvc"
-              ];
-              microsoftVisualStudioLicenseAccepted = true;
+      testProfile = { pkgs, name, ... }:
+        {
+          users.users = {
+            "${name}" = {
+              isNormalUser = true;
+              description = name;
+              home = "/home/${name}";
+              createHome = true;
             };
-          }));
+            root = {
+              hashedPassword = "";
+              hashedPasswordFile = null;
+            };
+          };
+
+          # Enable audio via pipewire.
+          services.pulseaudio.enable = false;
+          security.rtkit.enable = true;
+          services.pipewire = {
+            enable = true;
+            alsa.enable = true;
+            alsa.support32Bit = true;
+            pulse.enable = true;
+            jack.enable = true;
+          };
+
+          # Necessary for Xvfb
+          services.xserver.enable = true;
+          # This can be changed to another DM like xfce if a GUI is needed for debugging
+          services.xserver.displayManager.startx.enable = true;
+
+          environment.systemPackages = with pkgs; [
+            reaper
+            xdotool
+            xvfb-run
+            cargo-reaper
+          ];
+        };
     in
     {
       mkLib = import ./lib;
 
       checks = eachSystem (pkgs:
         let
-          inherit (pkgs) lib system cargoReaper craneLib commonArgs cargoArtifacts src rustToolchain;
+          inherit (pkgs) lib stdenv;
+          inherit (stdenv.hostPlatform) system;
+          inherit (pkgs.cargo-reaper) cargoReaper craneLib commonArgs cargoArtifacts src rustToolchain;
+
+          # `nixosTest`s always run their nodes on Linux. When these checks are
+          # evaluated on Darwin the test *driver* runs locally (Darwin advertises
+          # the `nixos-test` feature) while the guest VMs build on a linux-builder.
+          # Any store path we interpolate into a guest — the pre-built plugin, the
+          # in-VM Rust toolchain — must therefore be built for the guest's Linux
+          # system, not the Darwin host. (Packages pulled in via a node module's
+          # `pkgs` are already the guest's, so `systemPackages` need no adjustment.)
+          guestSystem = builtins.replaceStrings [ "darwin" ] [ "linux" ] system;
+          guestPkgs = pkgsFor guestSystem;
+
           commonTestArgs = src: {
             inherit src;
             strictDeps = true;
-          } // lib.optionalAttrs pkgs.stdenv.isLinux {
+          } // lib.optionalAttrs stdenv.isLinux {
             # Rust 1.96+ uses lld with -nodefaultlibs, which means libstdc++ is no
             # longer implicitly findable at runtime in the Nix sandbox for test binaries
             # compiled by cargo during the check phase.
-            LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
+            LD_LIBRARY_PATH = lib.makeLibraryPath [ stdenv.cc.cc.lib ];
           };
 
           testFileset = root: lib.fileset.toSource {
@@ -230,7 +284,7 @@
             cargoNextestPartitionsExtraArgs = "--no-tests=warn";
           });
 
-          test-cargo-reaper-new-ext = pkgs.stdenv.mkDerivation {
+          test-cargo-reaper-new-ext = stdenv.mkDerivation {
             name = "test-cargo-reaper-new-ext";
             buildInputs = [
               self.packages.${system}.default
@@ -254,7 +308,7 @@
               mv reaper_test $out/
             '';
           };
-          test-cargo-reaper-new-vst = pkgs.stdenv.mkDerivation {
+          test-cargo-reaper-new-vst = stdenv.mkDerivation {
             name = "test-cargo-reaper-new-vst";
             buildInputs = [
               self.packages.${system}.default
@@ -278,7 +332,7 @@
               mv reaper_test $out/
             '';
           };
-          test-cargo-reaper-list-package-manifest = pkgs.stdenv.mkDerivation {
+          test-cargo-reaper-list-package-manifest = stdenv.mkDerivation {
             name = "test-cargo-reaper-list-package-manifest";
             src = testFileset ./tests/plugin_manifests/package_manifest;
             buildInputs = [
@@ -296,7 +350,7 @@
               mkdir -p $out
             '';
           };
-          test-cargo-reaper-list-workspace-manifest = pkgs.stdenv.mkDerivation {
+          test-cargo-reaper-list-workspace-manifest = stdenv.mkDerivation {
             name = "test-cargo-reaper-list-workspace-manifest";
             src = testFileset ./tests/plugin_manifests/workspace_manifest;
             buildInputs = [
@@ -314,7 +368,7 @@
               mkdir -p $out
             '';
           };
-          test-cargo-reaper-list-workspace-package-manifest = pkgs.stdenv.mkDerivation {
+          test-cargo-reaper-list-workspace-package-manifest = stdenv.mkDerivation {
             name = "test-cargo-reaper-list-workspace-package-manifest";
             src = testFileset ./tests/plugin_manifests/workspace_package_manifest;
             buildInputs = [
@@ -333,54 +387,98 @@
             '';
           };
 
+          # Link the pre-built plugin using `cargo-reaper link` and
+          # assert the symbolic link exists in the `UserPlugins` directory.
           test-cargo-reaper-link =
             let
-              tests = import ./tests { };
+              plugin = self.checks.${guestSystem}.test-cargo-reaper-build-package-manifest;
+              plugin_name = "reaper_package_ext";
             in
             pkgs.testers.nixosTest {
               name = "test-cargo-reaper-link";
-              inherit (tests) nodes;
-              testScript = tests.test-cargo-reaper-link {
-                plugin = test-cargo-reaper-build-package-manifest;
-                plugin_name = "reaper_package_ext";
-              };
+              nodes.corro = testProfile;
+              testScript = ''
+                corro.start()
+                corro.wait_for_unit("multi-user.target")
+
+                # Launch REAPER once to initialize `~/.config/REAPER/UserPlugins`
+                corro.succeed("su - corro -c 'cargo-reaper run --no-build --headless --timeout 5s --stdout null --stderr null'", timeout=20)
+
+                corro.succeed("su - corro -c 'cargo-reaper link ${plugin}/lib/${plugin_name}.*'", timeout=15)
+                corro.succeed("su - corro -c 'test -e ~/.config/REAPER/UserPlugins/${plugin_name}.*'", timeout=15)
+              '';
             };
+
+          # Copy plugin source code and its pre-vendored dependencies onto the
+          # machine, build the plugin from source and open REAPER, asserting that
+          # no error window (titled after the plugin) ever appears. `--keep-going`
+          # keeps watching until the timeout instead of exiting on the first
+          # match, so the run exits non-zero only if the window is never seen.
           test-cargo-reaper-run =
             let
-              tests = import ./tests {
-                imports = [
-                  {
-                    environment.systemPackages = [
-                      rustToolchain
-                      pkgs.gcc
-                    ];
-                  }
-                ];
-              };
+              plugin_source = testFileset ./tests/plugin_manifests/package_manifest;
+              plugin_vendor = craneLib.vendorCargoDeps { src = plugin_source; };
+              plugin_name = "reaper_package_ext";
             in
             pkgs.testers.nixosTest {
               name = "test-cargo-reaper-run";
-              inherit (tests) nodes;
-              testScript = tests.test-cargo-reaper-run rec {
-                plugin_source = testFileset ./tests/plugin_manifests/package_manifest;
-                plugin_vendor = craneLib.vendorCargoDeps { src = plugin_source; };
-                plugin_name = "reaper_package_ext";
+              nodes.corro = {
+                imports = [ testProfile ];
+                # A Rust toolchain is required to build the plugin from source in
+                # the VM; it must target the guest's Linux system.
+                environment.systemPackages = [
+                  guestPkgs.cargo-reaper.rustToolchain
+                  guestPkgs.gcc
+                ];
               };
+              testScript = ''
+                corro.start()
+                corro.wait_for_unit("multi-user.target")
+
+                # Launch REAPER once to initialize `~/.config/REAPER/UserPlugins`
+                corro.succeed("su - corro -c 'cargo-reaper run --no-build --headless --timeout 5s --stdout null --stderr null'", timeout=20)
+
+                corro.succeed("su - root -c 'cp -r ${plugin_source}/* /home/corro/'", timeout=15)
+                corro.succeed("su - root -c 'mkdir -p /home/corro/.cargo && cp -r ${plugin_vendor}/config.toml /home/corro/.cargo/'", timeout=15)
+
+                status, output = corro.execute(
+                    "su - corro -c 'cargo-reaper run --headless --keep-going "
+                    "--locate-window \"${plugin_name} error\" "
+                    "--timeout 5s --stdout null --stderr null -- --release --offline'",
+                    timeout=180,
+                )
+                assert status != 0, f"'${plugin_name} error' window detected, REAPER output:\n{output}"
+              '';
             };
+
+          # Link the pre-built plugin using `cargo-reaper link`, then run
+          # `cargo-reaper clean` and assert the plugin link no longer exists in
+          # the `UserPlugins` directory.
           test-cargo-reaper-clean =
             let
-              tests = import ./tests { };
+              plugin = self.checks.${guestSystem}.test-cargo-reaper-build-package-manifest;
+              plugin_source = testFileset ./tests/plugin_manifests/package_manifest;
+              plugin_name = "reaper_package_ext";
             in
             pkgs.testers.nixosTest {
               name = "test-cargo-reaper-clean";
-              inherit (tests) nodes;
-              testScript = tests.test-cargo-reaper-clean {
-                plugin = test-cargo-reaper-build-package-manifest;
-                plugin_source = testFileset ./tests/plugin_manifests/package_manifest;
-                plugin_name = "reaper_package_ext";
-              };
+              nodes.corro = testProfile;
+              testScript = ''
+                corro.start()
+                corro.wait_for_unit("multi-user.target")
+
+                # Launch REAPER once to initialize `~/.config/REAPER/UserPlugins`
+                corro.succeed("su - corro -c 'cargo-reaper run --no-build --headless --timeout 5s --stdout null --stderr null'", timeout=20)
+
+                corro.succeed("su - corro -c 'cargo-reaper link ${plugin}/lib/${plugin_name}.*'", timeout=15)
+                corro.succeed("su - corro -c 'test -e ~/.config/REAPER/UserPlugins/${plugin_name}.*'", timeout=15)
+
+                corro.succeed("su - root -c 'cp -r ${plugin_source}/* /home/corro/'", timeout=15)
+                corro.succeed("su - corro -c 'cargo-reaper clean -p ${plugin_name}'", timeout=15)
+                corro.fail("su - corro -c 'test -e ~/.config/REAPER/UserPlugins/${plugin_name}.*'", timeout=15)
+              '';
             };
-        } // lib.optionalAttrs pkgs.stdenv.isLinux {
+        } // lib.optionalAttrs stdenv.isLinux {
           test-cargo-reaper-build-cross-windows =
             let
               rustcTarget = "x86_64-pc-windows-msvc";
@@ -465,38 +563,47 @@
         });
 
       packages = eachSystem (pkgs: {
-        cargo-reaper = pkgs.cargo-reaper;
+        inherit (pkgs) cargo-reaper;
         default = pkgs.cargo-reaper;
       });
 
-      apps = eachSystem (pkgs: rec {
-        cargo-reaper = {
-          type = "app";
-          program = "${pkgs.cargo-reaper}/bin/cargo-reaper";
-          meta = {
-            homepage = "https://github.com/Cloud-Scythe-Labs/cargo-reaper/";
-            description = "A Cargo plugin for developing REAPER extension plugins with Rust.";
-            license = pkgs.lib.licenses.mit;
-            maintainers = with pkgs.lib.maintainers; [ eureka-cpu ];
+      apps = eachSystem (pkgs:
+        let
+          inherit (pkgs) lib;
+          cargo-reaper = {
+            type = "app";
+            program = "${pkgs.cargo-reaper}/bin/cargo-reaper";
+            meta = {
+              homepage = "https://github.com/Cloud-Scythe-Labs/cargo-reaper/";
+              description = "A Cargo plugin for developing REAPER extension plugins with Rust.";
+              license = lib.licenses.mit;
+              maintainers = with lib.maintainers; [ eureka-cpu ];
+            };
           };
-        };
-        default = cargo-reaper;
-      });
+        in
+        {
+          inherit cargo-reaper;
+          default = cargo-reaper;
+        });
 
-      devShells = eachSystem (pkgs: {
-        default = pkgs.craneLib.devShell {
-          checks = self.checks.${pkgs.system};
-          packages = with pkgs; [
-            nil
-            nixpkgs-fmt
-            mdbook
-            self.packages.${pkgs.system}.default
-            reaper
-          ] ++ lib.optionals stdenv.isLinux [
-            xdotool
-          ];
-        };
-      });
+      devShells = eachSystem (pkgs:
+        let
+          inherit (pkgs.stdenv.hostPlatform) system;
+        in
+        {
+          default = pkgs.cargo-reaper.craneLib.devShell {
+            checks = self.checks.${system};
+            packages = with pkgs; [
+              nil
+              nixpkgs-fmt
+              mdbook
+              self.packages.${system}.default
+              reaper
+            ] ++ lib.optionals stdenv.isLinux [
+              xdotool
+            ];
+          };
+        });
 
       formatter = eachSystem (pkgs: pkgs.nixpkgs-fmt);
     };
