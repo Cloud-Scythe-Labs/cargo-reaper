@@ -49,6 +49,7 @@
                 craneLib = (crane.mkLib prev).overrideToolchain rustToolchain;
               in
               craneLib // (cargoReaperLib.crane { inherit craneLib; });
+
             src = craneLib.cleanCargoSource ./.;
 
             commonArgs = {
@@ -83,6 +84,7 @@
               doCheck = false;
             });
 
+            # TODO: This can probably use the mkScope pattern.
             # This repo's `mkLib` output, extended with the concrete build context
             # (toolchain, crane lib, common args, dependency artifacts) that the
             # checks and dev shell reuse. Grouped under a single attribute instead
@@ -140,9 +142,11 @@
           };
 
           # Necessary for Xvfb
-          services.xserver.enable = true;
-          # This can be changed to another DM like xfce if a GUI is needed for debugging
-          services.xserver.displayManager.startx.enable = true;
+          services.xserver = {
+            enable = true;
+            # This can be changed to another DM like xfce if a GUI is needed for debugging
+            displayManager.startx.enable = true;
+          };
 
           environment.systemPackages = with pkgs; [
             reaper
@@ -238,7 +242,7 @@
         in
         {
           # Build the crate as part of `nix flake check` for convenience
-          cargo-reaper = pkgs.cargo-reaper;
+          inherit (pkgs) cargo-reaper;
 
           inherit
             test-cargo-reaper-build-package-manifest
@@ -246,12 +250,6 @@
             test-cargo-reaper-build-workspace-package-manifest
             ;
 
-          # Run clippy (and deny all warnings) on the crate source,
-          # again, reusing the dependency artifacts from above.
-          #
-          # Note that this is done as a separate derivation so that
-          # we can block the CI if there are issues here, but not
-          # prevent downstream consumers from building our crate by itself.
           cargo-clippy = craneLib.cargoClippy (commonArgs // {
             inherit cargoArtifacts;
             cargoClippyExtraArgs = "--all-targets -- --deny warnings";
@@ -261,7 +259,6 @@
             inherit cargoArtifacts;
           });
 
-          # Check formatting
           cargo-fmt = craneLib.cargoFmt {
             inherit src;
           };
@@ -270,17 +267,14 @@
             src = lib.sources.sourceFilesBySuffices src [ ".toml" ];
           };
 
-          # Audit dependencies
           cargo-audit = craneLib.cargoAudit {
             inherit src advisory-db;
           };
 
-          # Audit licenses
           cargo-deny = craneLib.cargoDeny {
             inherit src;
           };
 
-          # Run tests with cargo-nextest
           cargo-nextest = craneLib.cargoNextest (commonArgs // {
             inherit cargoArtifacts;
             partitions = 1;
@@ -534,8 +528,8 @@
               package = "package_manifest";
               plugin = "reaper_package_ext";
               target = rustcTarget;
-              /* Checks could be ran using wine64, but in this case we only care
-              that the package was built and the output is the expected format */
+              # Checks could be ran using wine64, but in this case we only care
+              # that the package was built and the output is the expected format
               doCheck = false;
               doInstallCheck = true;
               installCheckPhase = ''
