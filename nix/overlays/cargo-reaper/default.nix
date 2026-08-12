@@ -7,28 +7,28 @@ let
       rustPlatform.buildCranePackage
     else
       rustPlatform.buildRustPackage
-    ;
-in
-{
-  cargo-reaper = buildRustPackage ({
-    src = lib.cleanSourceWith {
-      inherit ((builtins.fromTOML (builtins.readFile (src + "/Cargo.toml"))).package) name;
-      src = lib.cleanSource ../../../.;
-      filter = orig_path: type:
-        let
-          path = (toString orig_path);
-          base = baseNameOf path;
-          parentDir = baseNameOf (dirOf path);
-          matchesSuffix = lib.any (suffix: lib.hasSuffix suffix base) [
-            ".rs"
-            ".toml"
-          ];
-          isCargoFile = base == "Cargo.lock";
-          isCargoConfig = parentDir == ".cargo" && base == "config";
-        in
-        type == "directory" || matchesSuffix || isCargoFile || isCargoConfig;
-    };
+  ;
 
+  src = lib.cleanSourceWith {
+    inherit ((builtins.fromTOML (builtins.readFile ../../../Cargo.toml)).package) name;
+    src = lib.cleanSource ../../../.;
+    filter = orig_path: type:
+      let
+        path = (toString orig_path);
+        base = baseNameOf path;
+        parentDir = baseNameOf (dirOf path);
+        matchesSuffix = lib.any (suffix: lib.hasSuffix suffix base) [
+          ".rs"
+          ".toml"
+        ];
+        isCargoFile = base == "Cargo.lock";
+        isCargoConfig = parentDir == ".cargo" && base == "config";
+      in
+      type == "directory" || matchesSuffix || isCargoFile || isCargoConfig;
+  };
+
+  commonArgs = {
+    inherit src;
     strictDeps = true;
     __structuredAttrs = true;
 
@@ -43,7 +43,10 @@ in
     ] ++ lib.optionals stdenv.isDarwin [
       libiconv
     ];
-
+  };
+in
+{
+  cargo-reaper = buildRustPackage (commonArgs // {
     # NOTE: `installShellCompletion` only has support for Bash, Zsh and Fish
     postInstall = ''
       installShellCompletion --cmd cargo-reaper \
@@ -54,7 +57,7 @@ in
     doCheck = false;
   }
 
-  // lib.optionalAttrs (rustPlatform ? buildDepsOnly) {
+    // lib.optionalAttrs (rustPlatform ? buildDepsOnly) {
     cargoArtifacts = rustPlatform.buildDepsOnly commonArgs;
   });
 }
