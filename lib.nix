@@ -1,3 +1,4 @@
+# TODO: Fix this so that it is applied to rustPlatform instead of crane specifically
 { lib
 , cargo-reaper
 }:
@@ -9,11 +10,11 @@ in
 
   # Extend the functionality of the crane library for building REAPER extension plugins.
   crane =
-    { craneLib ? ''
-        Requires `craneLib` from the `crane` library: https://crane.dev/API.html#cranelib
+    { craneLib ? /* nix */ ''
+        # Requires `craneLib` from the `crane` library: https://crane.dev/API.html#cranelib
 
-        Example:
-        ```
+        # Example:
+        # ```
         {
           inputs = {
             nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -44,11 +45,14 @@ in
               });
             };
         }
-        ```
+        # ```
       ''
     }: {
       fileset = (craneLib.fileset or { }) // fileset;
 
+      # TODO: The usage shouldn't really change, but under the hood we need a way to
+      # determine which args to set. If we are using crane, the arg names are slightly
+      # different than rustPlatform.buildRustPackage.
       buildReaperExtension = { package, plugin ? package, target ? null, ... }@crateArgs:
         craneLib.buildPackage (crateArgs // {
           pname = package;
