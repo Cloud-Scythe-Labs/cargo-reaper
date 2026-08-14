@@ -1,71 +1,15 @@
-# TODO: Add a way to easily override the overlays so we don't have to commit to crane
-# It would be great if we could have a way to opt out of crane for testing. @claude,
-# don't work on this todo, just leave this comment as is.
 let
   inputs = import ./nix/tamal { };
   lib = (import inputs.nixpkgs { }).lib;
-  system = builtins.currentSystem;
-  overlays = [
-    (import "${inputs.fenix}/overlay.nix")
-    (final: prev:
-      let
-        cargoReaperLib' = import ./lib.nix {
-          inherit (prev) lib;
-          inherit (final) cargo-reaper;
-        };
-        rustToolchain = prev.fenix.stable.withComponents [
-          "cargo"
-          "rustfmt"
-          "clippy"
-          "rust-src"
-          "rust-analyzer"
-        ];
-        craneLib =
-          let
-            craneLib = (import inputs.crane { pkgs = prev; }).overrideToolchain rustToolchain;
-          in
-          # TODO: Since the lib.nix function is no longer dependent on crane specifically we
-          # should instead treat it as an extension of rustPlatform, just like crane. This
-          # means we no longer need crane specifically as an input in order to use it. It is
-          # effectively another overlay which calls overrideScope on rustPlatform, and lib.fileset
-          # in order to extend their capabilities.
-          craneLib // (cargoReaperLib'.crane { inherit craneLib; });
-        src = craneLib.cleanCargoSource ./.;
-        # TODO: We should be including this in passthru of the package, not in this overlay
-        # just because we require it somewhere downstream. If it's in the package, we can
-        # refer to it easily, as where here it is just clutter.
-        commonArgs = {
-          inherit src;
-          strictDeps = true;
-
-          nativeBuildInputs = with prev; [
-            installShellFiles
-          ] ++ prev.lib.optionals prev.stdenv.isLinux [
-            autoPatchelfHook
-          ];
-
-          buildInputs = with prev; [
-            libgcc
-          ] ++ prev.lib.optionals prev.stdenv.isDarwin [
-            libiconv
-          ];
-        };
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-      in
-      {
-        rustPlatform = prev.rustPlatform.overrideScope (rfinal: rprev: {
-          inherit (craneLib) buildDepsOnly buildReaperExtension;
-          buildCranePackage = craneLib.buildPackage;
-        });
-        cargoReaperLib = prev.lib.makeScope prev.newScope (self: (cargoReaperLib' // {
-          inherit craneLib commonArgs cargoArtifacts src rustToolchain;
-        }));
-      })
-    (import ./nix/overlays/cargo-reaper)
-  ];
 
   pkgs = import inputs.nixpkgs {
-    inherit system overlays;
+    system = builtins.currentSystem;
+    overlays = [
+      (import "${inputs.fenix}/overlay.nix")
+      (import ./nix/overlays/fenix-toolchain)
+      (import ./nix/overlays/crane)
+      (import ./nix/overlays/cargo-reaper)
+    ];
     config = {
       allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
         "reaper"
@@ -76,50 +20,11 @@ let
     };
   };
 
-  testProfile = { pkgs, name, ... }:
-    {
-      users.users = {
-        "${name}" = {
-          isNormalUser = true;
-          description = name;
-          home = "/home/${name}";
-          createHome = true;
-        };
-        root = {
-          hashedPassword = "";
-          hashedPasswordFile = null;
-        };
-      };
-
-      # Enable audio via pipewire.
-      services.pulseaudio.enable = false;
-      security.rtkit.enable = true;
-      services.pipewire = {
-        enable = true;
-        alsa.enable = true;
-        alsa.support32Bit = true;
-        pulse.enable = true;
-        jack.enable = true;
-      };
-
-      # Necessary for Xvfb
-      services.xserver = {
-        enable = true;
-        # This can be changed to another DM like xfce if a GUI is needed for debugging
-        displayManager.startx.enable = true;
-      };
-
-      environment.systemPackages = with pkgs; [
-        reaper
-        xdotool
-        xvfb-run
-        cargo-reaper
-      ];
-    };
   checks =
     let
-      inherit (pkgs) lib stdenv cargoReaperLib;
-      inherit (cargoReaperLib) craneLib commonArgs cargoArtifacts src rustToolchain;
+      inherit (pkgs) lib stdenv rustPlatform;
+      inherit (pkgs.cargo-reaper) src commonArgs cargoArtifacts;
+      inherit (rustPlatform) rustToolchain;
 
       commonTestArgs = src: {
         inherit src;
@@ -137,7 +42,7 @@ let
           (root + "/Cargo.toml")
           (root + "/Cargo.lock")
           (root + "/src")
-          (craneLib.fileset.cargoReaperConfigFilter (root + "/reaper.toml"))
+          (lib.fileset.cargoReaperConfigFilter (root + "/reaper.toml"))
         ];
       };
 
@@ -146,12 +51,12 @@ let
           root = ./tests/plugin_manifests/package_manifest;
           src = testFileset root;
           individualCrateArgs = commonTestArgs src;
-          cargoArtifacts = craneLib.buildDepsOnly individualCrateArgs;
+          cargoArtifacts = rustPlatform.buildDepsOnly individualCrateArgs;
         in
         (individualCrateArgs // {
           inherit cargoArtifacts;
         });
-      test-cargo-reaper-build-package-manifest = craneLib.buildReaperExtension (packageManifestTestArgs // {
+      test-cargo-reaper-build-package-manifest = rustPlatform.buildReaperExtension (packageManifestTestArgs // {
         package = "package_manifest";
         plugin = "reaper_package_ext";
       });
@@ -161,12 +66,12 @@ let
           root = ./tests/plugin_manifests/workspace_manifest;
           src = testFileset root;
           individualCrateArgs = commonTestArgs src;
-          cargoArtifacts = craneLib.buildDepsOnly individualCrateArgs;
+          cargoArtifacts = rustPlatform.buildDepsOnly individualCrateArgs;
         in
         (individualCrateArgs // {
           inherit cargoArtifacts;
         });
-      test-cargo-reaper-build-workspace-manifest = craneLib.buildReaperExtension (workspaceManifestTestArgs // {
+      test-cargo-reaper-build-workspace-manifest = rustPlatform.buildReaperExtension (workspaceManifestTestArgs // {
         package = "extension_0";
         plugin = "reaper_ext_0";
       });
@@ -176,12 +81,12 @@ let
           root = ./tests/plugin_manifests/workspace_package_manifest;
           src = testFileset root;
           individualCrateArgs = commonTestArgs src;
-          cargoArtifacts = craneLib.buildDepsOnly individualCrateArgs;
+          cargoArtifacts = rustPlatform.buildDepsOnly individualCrateArgs;
         in
         (individualCrateArgs // {
           inherit cargoArtifacts;
         });
-      test-cargo-reaper-build-workspace-package-manifest = craneLib.buildReaperExtension (workspacePackageManifestTestArgs // {
+      test-cargo-reaper-build-workspace-package-manifest = rustPlatform.buildReaperExtension (workspacePackageManifestTestArgs // {
         package = "workspace_package_manifest";
         plugin = "reaper_workspace_package_ext";
       });
@@ -196,31 +101,28 @@ let
         test-cargo-reaper-build-workspace-package-manifest
         ;
 
-      cargo-clippy = craneLib.cargoClippy (commonArgs // {
+      cargo-clippy = rustPlatform.cargoClippy (commonArgs // {
         inherit cargoArtifacts;
         cargoClippyExtraArgs = "--all-targets -- --deny warnings";
       });
 
-      cargo-doc = craneLib.cargoDoc (commonArgs // {
+      cargo-doc = rustPlatform.cargoDoc (commonArgs // {
         inherit cargoArtifacts;
       });
 
-      cargo-fmt = craneLib.cargoFmt {
+      cargo-fmt = rustPlatform.cargoFmt {
         inherit src;
       };
 
-      taplo-fmt = craneLib.taploFmt {
+      taplo-fmt = rustPlatform.taploFmt {
         src = lib.sources.sourceFilesBySuffices src [ ".toml" ];
       };
 
-      # TODO: `advisory-db` (rustsec/advisory-db) isn't tracked as a nixtamal input yet,
-      # so `cargo-audit` is left out of `checks` until it is.
-
-      cargo-deny = craneLib.cargoDeny {
+      cargo-deny = rustPlatform.cargoDeny {
         inherit src;
       };
 
-      cargo-nextest = craneLib.cargoNextest (commonArgs // {
+      cargo-nextest = rustPlatform.cargoNextest (commonArgs // {
         inherit cargoArtifacts;
         partitions = 1;
         partitionType = "count";
@@ -333,15 +235,16 @@ let
       test-cargo-reaper-build-cross-windows =
         let
           rustcTarget = "x86_64-pc-windows-msvc";
-          craneLibCross =
+          rustPlatformCross = rustPlatform.overrideScope (rfinal: rprev:
             let
-              rustWithWindowsTarget = pkgs.fenix.combine [
-                rustToolchain
+              craneLibCross = (import (import ./nix/tamal { }).crane { inherit pkgs; }).overrideToolchain (pkgs: pkgs.fenix.combine [
+                pkgs.rustPlatform.rustToolchain
                 pkgs.fenix.targets.${rustcTarget}.stable.rust-std
-              ];
-              craneLib = (import inputs.crane { inherit pkgs; }).overrideToolchain rustWithWindowsTarget;
+              ]);
             in
-            craneLib // (cargoReaperLib.crane { inherit craneLib; });
+            {
+              inherit (craneLibCross) buildPackage buildDepsOnly;
+            });
           crossArgs =
             let
               inherit (pkgs) llvmPackages windows;
@@ -374,9 +277,9 @@ let
                 "-C link-arg=/LIBPATH:${windows.sdk}/sdk/lib/um/x64"
               ];
             };
-          cargoArtifactsCross = craneLibCross.buildDepsOnly crossArgs;
+          cargoArtifactsCross = rustPlatformCross.buildDepsOnly crossArgs;
         in
-        craneLibCross.buildReaperExtension (crossArgs // {
+        rustPlatformCross.buildReaperExtension (crossArgs // {
           cargoArtifacts = cargoArtifactsCross;
           package = "package_manifest";
           plugin = "reaper_package_ext";
@@ -442,7 +345,7 @@ let
       inherit (pkgs) lib stdenv;
     in
     {
-      default = pkgs.cargoReaperLib.craneLib.devShell {
+      default = pkgs.rustPlatform.devShell {
         inherit checks;
         packages = with pkgs; [
           nil

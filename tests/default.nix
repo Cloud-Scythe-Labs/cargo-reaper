@@ -1,28 +1,14 @@
 let
-  /** Get a node from the flake lock file.
+  inputs = import ../nix/tamal { };
 
-  getFlake' :: String -> Attrset */
-  getFlake' = node:
-    let source = (builtins.fromJSON (builtins.readFile ../flake.lock)).nodes.${node}.locked; in
-    {
-      inherit (source) rev;
-      outPath = fetchTarball
-        (
-          let inherit (source) owner repo rev narHash; in {
-            url = "https://github.com/${owner}/${repo}/archive/${rev}.tar.gz";
-            sha256 = narHash;
-          }
-        );
-    };
-in
-{ nixpkgs ? getFlake' "nixpkgs" }:
-
-let
-  inherit (builtins.getFlake ../.) overlays checks;
-
-  pkgsFor = system: import nixpkgs {
+  pkgsFor = system: import inputs.nixpkgs {
     inherit system;
-    overlays = [ overlays.default ];
+    overlays = [
+      (import "${inputs.fenix}/overlay.nix")
+      (import ./nix/overlays/fenix-toolchain)
+      (import ./nix/overlays/crane)
+      (import ./nix/overlays/cargo-reaper)
+    ];
   };
 
   system = builtins.currentSystem;
@@ -30,13 +16,54 @@ let
 
   guestSystem = builtins.replaceStrings [ "darwin" ] [ "linux" ] system;
   guestPkgs = pkgsFor guestSystem;
+
+  testProfile = { pkgs, name, ... }:
+    {
+      users.users = {
+        "${name}" = {
+          isNormalUser = true;
+          description = name;
+          home = "/home/${name}";
+          createHome = true;
+        };
+        root = {
+          hashedPassword = "";
+          hashedPasswordFile = null;
+        };
+      };
+
+      # Enable audio via pipewire.
+      services.pulseaudio.enable = false;
+      security.rtkit.enable = true;
+      services.pipewire = {
+        enable = true;
+        alsa.enable = true;
+        alsa.support32Bit = true;
+        pulse.enable = true;
+        jack.enable = true;
+      };
+
+      # Necessary for Xvfb
+      services.xserver = {
+        enable = true;
+        # This can be changed to another DM like xfce if a GUI is needed for debugging
+        displayManager.startx.enable = true;
+      };
+
+      environment.systemPackages = with pkgs; [
+        reaper
+        xdotool
+        xvfb-run
+        cargo-reaper
+      ];
+    };
 in
 {
   # Link the pre-built plugin using `cargo-reaper link` and
   # assert the symbolic link exists in the `UserPlugins` directory.
   test-cargo-reaper-link =
     let
-      plugin = checks.${guestSystem}.test-cargo-reaper-build-package-manifest;
+      plugin = (import ../release.nix).checks.test-cargo-reaper-build-package-manifest;
       plugin_name = "reaper_package_ext";
     in
     hostPkgs.testers.nixosTest {
@@ -62,7 +89,7 @@ in
   test-cargo-reaper-run =
     let
       plugin_source = testFileset ./plugin_manifests/package_manifest;
-      plugin_vendor = craneLib.vendorCargoDeps { src = plugin_source; };
+      plugin_vendor = hostPkgs.rustPlatform.vendorCargoDeps { src = plugin_source; };
       plugin_name = "reaper_package_ext";
     in
     hostPkgs.testers.nixosTest {
