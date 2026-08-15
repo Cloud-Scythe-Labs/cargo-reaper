@@ -2,16 +2,23 @@ final: prev:
 let
   inherit (prev) lib rustPlatform;
 
+  useFenix = rustPlatform ? rustToolchain;
   useCrane = rustPlatform ? buildPackage;
   buildRustPackage =
     if useCrane then
       rustPlatform.buildPackage
+    else if useFenix then
+      (prev.makeRustPlatform {
+        rustc = rustPlatform.rustToolchain;
+        cargo = rustPlatform.rustToolchain;
+      }).buildRustPackage
     else
       rustPlatform.buildRustPackage
   ;
 
+  manifest = (builtins.fromTOML (builtins.readFile ../../../Cargo.toml)).package;
   src = lib.cleanSourceWith {
-    inherit ((builtins.fromTOML (builtins.readFile ../../../Cargo.toml)).package) name;
+    inherit (manifest) name;
     src = lib.cleanSource ../../../.;
     filter = orig_path: type:
       let
@@ -44,6 +51,10 @@ let
     ] ++ lib.optionals stdenv.isDarwin [
       libiconv
     ];
+  } // lib.optionalAttrs (!useCrane) {
+    inherit (manifest) version;
+    pname = manifest.name;
+    cargoLock.lockFile = src + "/Cargo.lock";
   };
 
   cargoArtifactsAttrs = lib.optionalAttrs (rustPlatform ? buildDepsOnly) {
@@ -71,8 +82,19 @@ in
 
   rustPlatform = prev.rustPlatform.overrideScope (rfinal: rprev:
     let
+      useFenix = rprev ? rustToolchain;
       useCrane = rprev ? buildPackage;
-      buildRustPackage = if useCrane then rfinal.buildPackage else rfinal.buildRustPackage;
+      buildRustPackage =
+        if useCrane then
+          rfinal.buildPackage
+        else if useFenix then
+          (prev.makeRustPlatform {
+            rustc = rfinal.rustToolchain;
+            cargo = rfinal.rustToolchain;
+          }).buildRustPackage
+        else
+          rfinal.buildRustPackage
+        ;
     in
     {
       buildReaperExtension =

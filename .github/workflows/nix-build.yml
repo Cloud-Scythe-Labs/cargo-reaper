@@ -1,11 +1,11 @@
-name: Nix Flake Check
+name: Nix Build
 
 on:
   workflow_call:
 
 jobs:
-  nix-flake-check:
-    name: Nix Flake Check (${{ matrix.os }})
+  nix-build:
+    name: Nix Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     permissions:
       id-token: "write"
@@ -18,12 +18,14 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+        uses: cachix/install-nix-action@v31
         with:
-          extra-conf: |
+          extra_nix_config: |
             extra-substituters = https://cloud-scythe-labs.cachix.org
             extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
 
-      - uses: DeterminateSystems/flake-checker-action@main
+      - name: Build packages
+        run: nix-build release.nix -A packages --keep-going
 
-      - run: nix flake check --keep-going
+      - name: Build checks
+        run: nix-build release.nix -A checks --keep-going

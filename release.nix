@@ -1,18 +1,22 @@
+{ ifd ? false }:
 let
   inputs = import ./nix/tamal { };
   lib = (import inputs.nixpkgs { }).lib;
 
   pkgs = import inputs.nixpkgs {
     system = builtins.currentSystem;
-    overlays = [
+    overlays = ((if ifd then [
       (import "${inputs.fenix}/overlay.nix")
       (import ./nix/overlays/fenix-toolchain)
       (import ./nix/overlays/crane)
+    ] else []) ++ [
       (import ./nix/overlays/cargo-reaper)
-    ];
+    ]);
     config = {
       allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
         "reaper"
+        # TODO: Perhaps we move the MS specific config to just the
+        # windows-msvc test?
         "win-sdk"
         "xwin-fetch-msvc"
       ];
@@ -101,6 +105,11 @@ let
         test-cargo-reaper-build-workspace-package-manifest
         ;
 
+      # TODO: Because these checks actually rely on the package source and artifacts,
+      # it would probably be more idiomatic to add these as passthru.tests that way
+      # they can be ran from the attribute selection as opposed to forwarding all
+      # artifacts of the build through the overlay. Then here we can add the checks
+      # from pkgs.cargo-reaper.passthru.tests.
       cargo-clippy = rustPlatform.cargoClippy (commonArgs // {
         inherit cargoArtifacts;
         cargoClippyExtraArgs = "--all-targets -- --deny warnings";
@@ -321,25 +330,6 @@ let
     default = pkgs.cargo-reaper;
   };
 
-  apps =
-    let
-      inherit (pkgs) lib;
-      cargo-reaper = {
-        type = "app";
-        program = "${pkgs.cargo-reaper}/bin/cargo-reaper";
-        meta = {
-          homepage = "https://github.com/Cloud-Scythe-Labs/cargo-reaper/";
-          description = "A Cargo plugin for developing REAPER extension plugins with Rust.";
-          license = lib.licenses.mit;
-          maintainers = with lib.maintainers; [ eureka-cpu ];
-        };
-      };
-    in
-    {
-      inherit cargo-reaper;
-      default = cargo-reaper;
-    };
-
   devShells =
     let
       inherit (pkgs) lib stdenv;
@@ -362,6 +352,6 @@ let
   formatter = pkgs.nixpkgs-fmt;
 in
 {
-  inherit checks packages apps devShells formatter;
+  inherit checks packages devShells formatter;
 }
 

@@ -10,8 +10,8 @@ concurrency:
 permissions: read-all
 
 jobs:
-  nix-flake-check:
-    uses: ./.github/workflows/nix-flake-check.yml
+  nix-build:
+    uses: ./.github/workflows/nix-build.yml
     permissions:
       id-token: write
       contents: read
