@@ -28,4 +28,4 @@ jobs:
         run: nix-build release.nix -A packages --keep-going
 
       - name: Build checks
-        run: nix-build release.nix -A checks --keep-going
+        run: nix-build release.nix --arg ifd true -A checks --keep-going

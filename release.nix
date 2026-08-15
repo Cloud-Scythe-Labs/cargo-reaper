@@ -1,34 +1,27 @@
 { ifd ? false }:
 let
   inputs = import ./nix/tamal { };
-  lib = (import inputs.nixpkgs { }).lib;
+  inherit (import inputs.nixpkgs { }) lib;
 
   pkgs = import inputs.nixpkgs {
     system = builtins.currentSystem;
-    overlays = ((if ifd then [
+    overlays = (lib.optionals ifd [
       (import "${inputs.fenix}/overlay.nix")
       (import ./nix/overlays/fenix-toolchain)
       (import ./nix/overlays/crane)
-    ] else []) ++ [
+    ]) ++ [
       (import ./nix/overlays/cargo-reaper)
-    ]);
+    ];
     config = {
       allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
         "reaper"
-        # TODO: Perhaps we move the MS specific config to just the
-        # windows-msvc test?
-        "win-sdk"
-        "xwin-fetch-msvc"
       ];
-      microsoftVisualStudioLicenseAccepted = true;
     };
   };
 
   checks =
     let
       inherit (pkgs) lib stdenv rustPlatform;
-      inherit (pkgs.cargo-reaper) src commonArgs cargoArtifacts;
-      inherit (rustPlatform) rustToolchain;
 
       commonTestArgs = src: {
         inherit src;
@@ -57,9 +50,9 @@ let
           individualCrateArgs = commonTestArgs src;
           cargoArtifacts = rustPlatform.buildDepsOnly individualCrateArgs;
         in
-        (individualCrateArgs // {
+        individualCrateArgs // {
           inherit cargoArtifacts;
-        });
+        };
       test-cargo-reaper-build-package-manifest = rustPlatform.buildReaperExtension (packageManifestTestArgs // {
         package = "package_manifest";
         plugin = "reaper_package_ext";
@@ -72,9 +65,9 @@ let
           individualCrateArgs = commonTestArgs src;
           cargoArtifacts = rustPlatform.buildDepsOnly individualCrateArgs;
         in
-        (individualCrateArgs // {
+        individualCrateArgs // {
           inherit cargoArtifacts;
-        });
+        };
       test-cargo-reaper-build-workspace-manifest = rustPlatform.buildReaperExtension (workspaceManifestTestArgs // {
         package = "extension_0";
         plugin = "reaper_ext_0";
@@ -87,16 +80,16 @@ let
           individualCrateArgs = commonTestArgs src;
           cargoArtifacts = rustPlatform.buildDepsOnly individualCrateArgs;
         in
-        (individualCrateArgs // {
+        individualCrateArgs // {
           inherit cargoArtifacts;
-        });
+        };
       test-cargo-reaper-build-workspace-package-manifest = rustPlatform.buildReaperExtension (workspacePackageManifestTestArgs // {
         package = "workspace_package_manifest";
         plugin = "reaper_workspace_package_ext";
       });
     in
     {
-      # Build the crate as part of `nix flake check` for convenience
+      # Build the crate as part of `checks` for convenience
       inherit (pkgs) cargo-reaper;
 
       inherit
@@ -105,38 +98,14 @@ let
         test-cargo-reaper-build-workspace-package-manifest
         ;
 
-      # TODO: Because these checks actually rely on the package source and artifacts,
-      # it would probably be more idiomatic to add these as passthru.tests that way
-      # they can be ran from the attribute selection as opposed to forwarding all
-      # artifacts of the build through the overlay. Then here we can add the checks
-      # from pkgs.cargo-reaper.passthru.tests.
-      cargo-clippy = rustPlatform.cargoClippy (commonArgs // {
-        inherit cargoArtifacts;
-        cargoClippyExtraArgs = "--all-targets -- --deny warnings";
-      });
-
-      cargo-doc = rustPlatform.cargoDoc (commonArgs // {
-        inherit cargoArtifacts;
-      });
-
-      cargo-fmt = rustPlatform.cargoFmt {
-        inherit src;
-      };
-
-      taplo-fmt = rustPlatform.taploFmt {
-        src = lib.sources.sourceFilesBySuffices src [ ".toml" ];
-      };
-
-      cargo-deny = rustPlatform.cargoDeny {
-        inherit src;
-      };
-
-      cargo-nextest = rustPlatform.cargoNextest (commonArgs // {
-        inherit cargoArtifacts;
-        partitions = 1;
-        partitionType = "count";
-        cargoNextestPartitionsExtraArgs = "--no-tests=warn";
-      });
+      inherit (pkgs.cargo-reaper.passthru.tests)
+        cargo-clippy
+        cargo-doc
+        cargo-fmt
+        taplo-fmt
+        cargo-deny
+        cargo-nextest
+        ;
 
       test-cargo-reaper-new-ext = stdenv.mkDerivation {
         name = "test-cargo-reaper-new-ext";
@@ -256,7 +225,20 @@ let
             });
           crossArgs =
             let
-              inherit (pkgs) llvmPackages windows;
+              inherit (pkgs) llvmPackages;
+              # `win-sdk`/`xwin-fetch-msvc` are unfree and only needed here, so
+              # accept the MS license in a narrowly-scoped `pkgs` rather than
+              # on the top-level `pkgs` used by every package/check/devShell.
+              inherit (import inputs.nixpkgs {
+                system = builtins.currentSystem;
+                config = {
+                  allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+                    "win-sdk"
+                    "xwin-fetch-msvc"
+                  ];
+                  microsoftVisualStudioLicenseAccepted = true;
+                };
+              }) windows;
               envTarget = builtins.replaceStrings [ "-" ] [ "_" ] rustcTarget;
               envTargetUpper = lib.toUpper envTarget;
               CC = "${llvmPackages.clang-unwrapped}/bin/clang-cl";

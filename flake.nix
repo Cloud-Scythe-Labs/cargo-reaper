@@ -11,15 +11,19 @@
         default = import ./nix/overlays/cargo-reaper;
       };
 
-      eachSystem = f: nixpkgs.lib.genAttrs [
-        "x86_64-linux"
-        "aarch64-linux"
-        "aarch64-darwin"
-      ]
-        (system: f (import inputs.nixpkgs {
-          inherit system;
-          overlays = [ overlays.default ];
-        }));
+      eachSystem = f: builtins.listToAttrs (map
+        (system: {
+          name = system;
+          value = f (import inputs.nixpkgs {
+            inherit system;
+            overlays = [ overlays.default ];
+          });
+        })
+        [
+          "x86_64-linux"
+          "aarch64-linux"
+          "aarch64-darwin"
+        ]);
     in
     {
       inherit overlays;

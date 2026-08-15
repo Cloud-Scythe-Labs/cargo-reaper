@@ -62,7 +62,7 @@ let
   };
 in
 {
-  cargo-reaper = buildRustPackage (commonArgs // {
+  cargo-reaper = buildRustPackage (commonArgs // cargoArtifactsAttrs // {
     # NOTE: `installShellCompletion` only has support for Bash, Zsh and Fish
     postInstall = ''
       installShellCompletion --cmd cargo-reaper \
@@ -71,8 +71,29 @@ in
         --zsh <($out/bin/cargo-reaper completions zsh)
     '';
     doCheck = false;
-    passthru = { inherit src commonArgs; } // cargoArtifactsAttrs;
-  } // cargoArtifactsAttrs);
+    passthru = lib.optionalAttrs useCrane {
+      tests = {
+        cargo-clippy = rustPlatform.cargoClippy (commonArgs // {
+          inherit (cargoArtifactsAttrs) cargoArtifacts;
+          cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+        });
+        cargo-doc = rustPlatform.cargoDoc (commonArgs // {
+          inherit (cargoArtifactsAttrs) cargoArtifacts;
+        });
+        cargo-fmt = rustPlatform.cargoFmt { inherit src; };
+        taplo-fmt = rustPlatform.taploFmt {
+          src = lib.sources.sourceFilesBySuffices src [ ".toml" ];
+        };
+        cargo-deny = rustPlatform.cargoDeny { inherit src; };
+        cargo-nextest = rustPlatform.cargoNextest (commonArgs // {
+          inherit (cargoArtifactsAttrs) cargoArtifacts;
+          partitions = 1;
+          partitionType = "count";
+          cargoNextestPartitionsExtraArgs = "--no-tests=warn";
+        });
+      };
+    };
+  });
 
   lib = prev.lib // {
     fileset = prev.lib.fileset // {
@@ -82,8 +103,8 @@ in
 
   rustPlatform = prev.rustPlatform.overrideScope (rfinal: rprev:
     let
-      useFenix = rprev ? rustToolchain;
-      useCrane = rprev ? buildPackage;
+      useFenix = rfinal ? rustToolchain;
+      useCrane = rfinal ? buildPackage;
       buildRustPackage =
         if useCrane then
           rfinal.buildPackage
