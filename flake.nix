@@ -5,9 +5,7 @@
 
   outputs = _:
     let
-      overlays = {
-        default = import ./nix/overlays/cargo-reaper;
-      };
+      overlays.default = import ./nix/overlays/cargo-reaper;
 
       eachSystem = f: builtins.listToAttrs (map
         (system:

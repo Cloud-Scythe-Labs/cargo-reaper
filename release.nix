@@ -15,8 +15,22 @@ let
     config = {
       allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
         "reaper"
+        "win-sdk"
+        "xwin-fetch-msvc"
       ];
+      microsoftVisualStudioLicenseAccepted = true;
     };
+  };
+
+  # The fileset for each test derivation.
+  testFileset = root: pkgs.lib.fileset.toSource {
+    inherit root;
+    fileset = pkgs.lib.fileset.unions [
+      (root + "/Cargo.toml")
+      (root + "/Cargo.lock")
+      (root + "/src")
+      (pkgs.lib.fileset.cargoReaperConfigFilter (root + "/reaper.toml"))
+    ];
   };
 
   checks =
@@ -31,16 +45,6 @@ let
         # longer implicitly findable at runtime in the Nix sandbox for test binaries
         # compiled by cargo during the check phase.
         LD_LIBRARY_PATH = lib.makeLibraryPath [ stdenv.cc.cc.lib ];
-      };
-
-      testFileset = root: lib.fileset.toSource {
-        inherit root;
-        fileset = lib.fileset.unions [
-          (root + "/Cargo.toml")
-          (root + "/Cargo.lock")
-          (root + "/src")
-          (lib.fileset.cargoReaperConfigFilter (root + "/reaper.toml"))
-        ];
       };
 
       packageManifestTestArgs =
@@ -209,7 +213,16 @@ let
           mkdir -p $out
         '';
       };
-    } // lib.optionalAttrs stdenv.isLinux {
+    };
+in
+{
+  inherit checks;
+
+  crossChecks =
+    let
+      inherit (pkgs) lib stdenv rustPlatform;
+    in
+    lib.optionalAttrs stdenv.isLinux {
       test-cargo-reaper-build-cross-windows =
         let
           rustcTarget = "x86_64-pc-windows-msvc";
@@ -225,20 +238,7 @@ let
             });
           crossArgs =
             let
-              inherit (pkgs) llvmPackages;
-              # `win-sdk`/`xwin-fetch-msvc` are unfree and only needed here, so
-              # accept the MS license in a narrowly-scoped `pkgs` rather than
-              # on the top-level `pkgs` used by every package/check/devShell.
-              inherit (import inputs.nixpkgs {
-                system = builtins.currentSystem;
-                config = {
-                  allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
-                    "win-sdk"
-                    "xwin-fetch-msvc"
-                  ];
-                  microsoftVisualStudioLicenseAccepted = true;
-                };
-              }) windows;
+              inherit (pkgs) llvmPackages windows;
               envTarget = builtins.replaceStrings [ "-" ] [ "_" ] rustcTarget;
               envTargetUpper = lib.toUpper envTarget;
               CC = "${llvmPackages.clang-unwrapped}/bin/clang-cl";
@@ -312,6 +312,8 @@ let
     default = pkgs.cargo-reaper;
   };
 
+  formatter = pkgs.nixpkgs-fmt;
+
   devShells =
     let
       inherit (pkgs) lib stdenv;
@@ -330,10 +332,5 @@ let
         ];
       };
     };
-
-  formatter = pkgs.nixpkgs-fmt;
-in
-{
-  inherit checks packages devShells formatter;
 }
 

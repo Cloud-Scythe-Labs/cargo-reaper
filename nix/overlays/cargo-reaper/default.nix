@@ -71,7 +71,7 @@ in
         --zsh <($out/bin/cargo-reaper completions zsh)
     '';
     doCheck = false;
-    passthru = lib.optionalAttrs useCrane {
+    passthru = lib.optionalAttrs useCrane (cargoArtifactsAttrs // {
       tests = {
         cargo-clippy = rustPlatform.cargoClippy (commonArgs // {
           inherit (cargoArtifactsAttrs) cargoArtifacts;
@@ -92,7 +92,7 @@ in
           cargoNextestPartitionsExtraArgs = "--no-tests=warn";
         });
       };
-    };
+    });
   });
 
   lib = prev.lib // {
