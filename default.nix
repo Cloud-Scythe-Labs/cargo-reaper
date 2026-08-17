@@ -1,1 +1,1 @@
-(import ./release.nix).packages.default
+(import ./release.nix { }).packages.default
