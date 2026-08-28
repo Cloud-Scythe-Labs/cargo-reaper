@@ -1,1 +1,1 @@
-(import ./release.nix { ifd = true; }).devShells.default
+(import ./release.nix { }).devShells.default

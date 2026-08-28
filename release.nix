@@ -1,45 +1,41 @@
-{ ifd ? false }:
 let
   inputs = import ./nix/tamal { };
-  inherit (import inputs.nixpkgs { }) lib;
 
+  inherit (pkgs) lib stdenv;
   pkgs = import inputs.nixpkgs {
     system = builtins.currentSystem;
-    overlays = (lib.optionals ifd [
-      (import "${inputs.fenix}/overlay.nix")
-      (import ./nix/overlays/fenix-toolchain)
-      (import ./nix/overlays/crane)
-    ]) ++ [
+    overlays = [
       (import ./nix/overlays/cargo-reaper)
     ];
     config = {
       allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
         "reaper"
-        "win-sdk"
-        "xwin-fetch-msvc"
       ];
-      microsoftVisualStudioLicenseAccepted = true;
     };
   };
 
   # The fileset for each test derivation.
-  testFileset = root: pkgs.lib.fileset.toSource {
+  testFileset = root: lib.fileset.toSource {
     inherit root;
-    fileset = pkgs.lib.fileset.unions [
+    fileset = lib.fileset.unions [
       (root + "/Cargo.toml")
       (root + "/Cargo.lock")
       (root + "/src")
-      (pkgs.lib.fileset.cargoReaperConfigFilter (root + "/reaper.toml"))
+      (lib.fileset.cargoReaperConfigFilter (root + "/reaper.toml"))
     ];
   };
 
   checks =
     let
-      inherit (pkgs) lib stdenv rustPlatform;
+      inherit (pkgs) rustPlatform;
 
       commonTestArgs = src: {
         inherit src;
         strictDeps = true;
+        cargoLock = {
+          lockFile = src + "/Cargo.lock";
+          allowBuiltinFetchGit = true;
+        };
       } // lib.optionalAttrs stdenv.isLinux {
         # Rust 1.96+ uses lld with -nodefaultlibs, which means libstdc++ is no
         # longer implicitly findable at runtime in the Nix sandbox for test binaries
@@ -47,47 +43,17 @@ let
         LD_LIBRARY_PATH = lib.makeLibraryPath [ stdenv.cc.cc.lib ];
       };
 
-      packageManifestTestArgs =
-        let
-          root = ./tests/plugin_manifests/package_manifest;
-          src = testFileset root;
-          individualCrateArgs = commonTestArgs src;
-          cargoArtifacts = rustPlatform.buildDepsOnly individualCrateArgs;
-        in
-        individualCrateArgs // {
-          inherit cargoArtifacts;
-        };
-      test-cargo-reaper-build-package-manifest = rustPlatform.buildReaperExtension (packageManifestTestArgs // {
+      test-cargo-reaper-build-package-manifest = rustPlatform.buildReaperExtension (commonTestArgs (testFileset ./tests/plugin_manifests/package_manifest) // {
         package = "package_manifest";
         plugin = "reaper_package_ext";
       });
 
-      workspaceManifestTestArgs =
-        let
-          root = ./tests/plugin_manifests/workspace_manifest;
-          src = testFileset root;
-          individualCrateArgs = commonTestArgs src;
-          cargoArtifacts = rustPlatform.buildDepsOnly individualCrateArgs;
-        in
-        individualCrateArgs // {
-          inherit cargoArtifacts;
-        };
-      test-cargo-reaper-build-workspace-manifest = rustPlatform.buildReaperExtension (workspaceManifestTestArgs // {
+      test-cargo-reaper-build-workspace-manifest = rustPlatform.buildReaperExtension (commonTestArgs (testFileset ./tests/plugin_manifests/workspace_manifest) // {
         package = "extension_0";
         plugin = "reaper_ext_0";
       });
 
-      workspacePackageManifestTestArgs =
-        let
-          root = ./tests/plugin_manifests/workspace_package_manifest;
-          src = testFileset root;
-          individualCrateArgs = commonTestArgs src;
-          cargoArtifacts = rustPlatform.buildDepsOnly individualCrateArgs;
-        in
-        individualCrateArgs // {
-          inherit cargoArtifacts;
-        };
-      test-cargo-reaper-build-workspace-package-manifest = rustPlatform.buildReaperExtension (workspacePackageManifestTestArgs // {
+      test-cargo-reaper-build-workspace-package-manifest = rustPlatform.buildReaperExtension (commonTestArgs (testFileset ./tests/plugin_manifests/workspace_package_manifest) // {
         package = "workspace_package_manifest";
         plugin = "reaper_workspace_package_ext";
       });
@@ -220,22 +186,38 @@ in
 
   crossChecks =
     let
-      inherit (pkgs) lib stdenv rustPlatform;
+      inherit (pkgs) rustPlatform;
     in
     lib.optionalAttrs stdenv.isLinux {
       test-cargo-reaper-build-cross-windows =
         let
+          # TODO: get from stdenv.hostPlatform.rust.rustcTarget
+          # Also just clean this up in general...
           rustcTarget = "x86_64-pc-windows-msvc";
-          rustPlatformCross = rustPlatform.overrideScope (rfinal: rprev:
-            let
-              craneLibCross = (import (import ./nix/tamal { }).crane { inherit pkgs; }).overrideToolchain (pkgs: pkgs.fenix.combine [
-                pkgs.rustPlatform.rustToolchain
-                pkgs.fenix.targets.${rustcTarget}.stable.rust-std
-              ]);
-            in
-            {
-              inherit (craneLibCross) buildPackage buildDepsOnly;
-            });
+          # Fenix is only needed here, to supply a `rust-std` sysroot for
+          # `rustcTarget` — nixpkgs' plain rustPlatform has no way to obtain
+          # a cross-target std on its own. Scoped locally rather than
+          # applied to the top-level `pkgs` used by every other package/check.
+          fenixPkgs = import inputs.nixpkgs {
+            system = builtins.currentSystem;
+            overlays = [
+              (import "${inputs.fenix}/overlay.nix")
+              (import ./nix/overlays/fenix-toolchain)
+            ];
+            config = {
+              allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+                "win-sdk"
+                "xwin-fetch-msvc"
+              ];
+              microsoftVisualStudioLicenseAccepted = true;
+            };
+          };
+          rustPlatformCross = rustPlatform.overrideScope (rfinal: rprev: {
+            rustToolchain = fenixPkgs.fenix.combine [
+              fenixPkgs.rustPlatform.rustToolchain
+              fenixPkgs.fenix.targets.${rustcTarget}.stable.rust-std
+            ];
+          });
           crossArgs =
             let
               inherit (pkgs) llvmPackages windows;
@@ -268,10 +250,8 @@ in
                 "-C link-arg=/LIBPATH:${windows.sdk}/sdk/lib/um/x64"
               ];
             };
-          cargoArtifactsCross = rustPlatformCross.buildDepsOnly crossArgs;
         in
         rustPlatformCross.buildReaperExtension (crossArgs // {
-          cargoArtifacts = cargoArtifactsCross;
           package = "package_manifest";
           plugin = "reaper_package_ext";
           target = rustcTarget;
@@ -314,23 +294,17 @@ in
 
   formatter = pkgs.nixpkgs-fmt;
 
-  devShells =
-    let
-      inherit (pkgs) lib stdenv;
-    in
-    {
-      default = pkgs.rustPlatform.devShell {
-        inherit checks;
-        packages = with pkgs; [
-          nil
-          nixpkgs-fmt
-          mdbook
-          cargo-reaper
-          reaper
-        ] ++ lib.optionals stdenv.isLinux [
-          xdotool
-        ];
-      };
+  devShells = {
+    default = pkgs.mkShell {
+      packages = with pkgs; [
+        nil
+        nixpkgs-fmt
+        mdbook
+        cargo-reaper
+        reaper
+      ] ++ lib.optionals stdenv.isLinux [
+        xdotool
+      ];
     };
+  };
 }
-

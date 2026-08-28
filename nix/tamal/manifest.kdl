@@ -23,14 +23,4 @@ inputs {
 			| cut -f1
 		}
 	}
-	crane {
-		archive {
-			url "https://github.com/ipetkov/crane/archive/{{fresh_value}}.tar.gz"
-		}
-		hash algorithm=SHA-256
-		fresh-cmd {
-			$ git ls-remote --branches "https://github.com/ipetkov/crane.git" master
-			| cut -f1
-		}
-	}
 }

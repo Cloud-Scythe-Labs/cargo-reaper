@@ -4,9 +4,6 @@ let
   pkgsFor = system: import inputs.nixpkgs {
     inherit system;
     overlays = [
-      (import "${inputs.fenix}/overlay.nix")
-      (import ./nix/overlays/fenix-toolchain)
-      (import ./nix/overlays/crane)
       (import ./nix/overlays/cargo-reaper)
     ];
   };
@@ -89,7 +86,7 @@ in
   test-cargo-reaper-run =
     let
       plugin_source = testFileset ./plugin_manifests/package_manifest;
-      plugin_vendor = hostPkgs.rustPlatform.vendorCargoDeps { src = plugin_source; };
+      plugin_vendor = hostPkgs.rustPlatform.importCargoLock { lockFile = plugin_source + "/Cargo.lock"; };
       plugin_name = "reaper_package_ext";
     in
     hostPkgs.testers.nixosTest {
@@ -99,7 +96,8 @@ in
         # A Rust toolchain is required to build the plugin from source in
         # the VM; it must target the guest's Linux system.
         environment.systemPackages = with guestPkgs; [
-          cargoReaper.rustToolchain
+          cargo
+          rustc
           gcc
         ];
       };

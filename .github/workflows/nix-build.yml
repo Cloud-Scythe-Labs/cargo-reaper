@@ -24,15 +24,12 @@ jobs:
             extra-substituters = https://cloud-scythe-labs.cachix.org
             extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
 
-      - name: Build Cargo artifacts
-        run: nix-build release.nix --arg ifd true -A packages.cargo-reaper.passthru.cargoArtifacts
-
       - name: Build packages
-        run: nix-build release.nix --arg ifd true -A packages --keep-going
+        run: nix-build release.nix -A packages --keep-going
 
       - name: Build checks
-        run: nix-build release.nix --arg ifd true -A checks --keep-going
+        run: nix-build release.nix -A checks --keep-going
 
       - name: Build Windows cross check
         if: matrix.os == 'ubuntu-latest'
-        run: nix-build release.nix --arg ifd true -A crossChecks --keep-going
+        run: nix-build release.nix -A crossChecks --keep-going

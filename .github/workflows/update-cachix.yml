@@ -34,15 +34,12 @@ jobs:
           name: cloud-scythe-labs
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
-      # Only cargoArtifacts, packages and the devShell are built here, since
-      # everything built in this job gets pushed to the cache by
-      # cachix-action above — checks/tests are deliberately never built in
-      # this job so their outputs never end up in the shared cache.
-      - name: Build Cargo artifacts
-        run: nix-build release.nix --arg ifd true -A packages.cargo-reaper.passthru.cargoArtifacts
-
+      # Only packages and the devShell are built here, since everything
+      # built in this job gets pushed to the cache by cachix-action above —
+      # checks/tests are deliberately never built in this job so their
+      # outputs never end up in the shared cache.
       - name: Build packages
-        run: nix-build release.nix --arg ifd true -A packages --keep-going
+        run: nix-build release.nix -A packages --keep-going
 
       - name: Build devShell
         run: nix-build shell.nix --keep-going
