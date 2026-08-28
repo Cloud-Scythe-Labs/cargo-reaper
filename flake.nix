@@ -7,18 +7,17 @@
     let
       overlays.default = import ./nix/overlays/cargo-reaper;
 
-      eachSystem = f: builtins.listToAttrs (map
-        (system:
-          let
-            inputs = import ./nix/tamal { inherit system; };
-          in
-          {
-            name = system;
-            value = f (import inputs.nixpkgs {
-              inherit system;
-              overlays = [ overlays.default ];
-            });
-          })
+      eachSystem = f: builtins.listToAttrs (map (system:
+        let
+          inputs = import ./nix/tamal { inherit system; };
+        in
+        {
+          name = system;
+          value = f (import inputs.nixpkgs {
+            inherit system;
+            overlays = [ overlays.default ];
+          });
+        })
         [
           "x86_64-linux"
           "aarch64-linux"

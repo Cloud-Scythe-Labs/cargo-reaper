@@ -10,7 +10,10 @@ let
     config = {
       allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
         "reaper"
+        "win-sdk"
+        "xwin-fetch-msvc"
       ];
+      microsoftVisualStudioLicenseAccepted = true;
     };
   };
 
@@ -184,77 +187,63 @@ in
 {
   inherit checks;
 
-  crossChecks =
-    let
-      inherit (pkgs) rustPlatform;
-    in
-    lib.optionalAttrs stdenv.isLinux {
-      test-cargo-reaper-build-cross-windows =
+  crossChecks = lib.optionalAttrs stdenv.isLinux {
+    test-cargo-reaper-build-cross-windows =
+      let
+        winPkgs = pkgs.pkgsCross.x86_64-windows;
+        inherit (winPkgs.stdenv.hostPlatform.rust) rustcTarget;
+
+        fenix = pkgs.callPackage inputs.fenix { };
+        rustToolchain = fenix.combine [
+          (fenix.stable.withComponents [ "cargo" "rustc" ])
+          fenix.targets.${rustcTarget}.stable.rust-std
+        ];
+        winRustPlatform = pkgs.rustPlatform.overrideScope (rfinal: rprev: {
+          # Override `buildRustPackage` with our windows toolchain
+          inherit (pkgs.makeRustPlatform {
+            rustc = rustToolchain;
+            cargo = rustToolchain;
+          })
+            buildRustPackage;
+        });
+      in
+      winRustPlatform.buildReaperExtension (
         let
-          # TODO: get from stdenv.hostPlatform.rust.rustcTarget
-          # Also just clean this up in general...
-          rustcTarget = "x86_64-pc-windows-msvc";
-          # Fenix is only needed here, to supply a `rust-std` sysroot for
-          # `rustcTarget` — nixpkgs' plain rustPlatform has no way to obtain
-          # a cross-target std on its own. Scoped locally rather than
-          # applied to the top-level `pkgs` used by every other package/check.
-          fenixPkgs = import inputs.nixpkgs {
-            system = builtins.currentSystem;
-            overlays = [
-              (import "${inputs.fenix}/overlay.nix")
-              (import ./nix/overlays/fenix-toolchain)
-            ];
-            config = {
-              allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
-                "win-sdk"
-                "xwin-fetch-msvc"
-              ];
-              microsoftVisualStudioLicenseAccepted = true;
-            };
-          };
-          rustPlatformCross = rustPlatform.overrideScope (rfinal: rprev: {
-            rustToolchain = fenixPkgs.fenix.combine [
-              fenixPkgs.rustPlatform.rustToolchain
-              fenixPkgs.fenix.targets.${rustcTarget}.stable.rust-std
-            ];
-          });
-          crossArgs =
-            let
-              inherit (pkgs) llvmPackages windows;
-              envTarget = builtins.replaceStrings [ "-" ] [ "_" ] rustcTarget;
-              envTargetUpper = lib.toUpper envTarget;
-              CC = "${llvmPackages.clang-unwrapped}/bin/clang-cl";
-              # Flags forwarded to clang-cl by cc-rs so it can locate MSVC headers and libs.
-              CFLAGS = lib.concatStringsSep " " [
-                "/vctoolsdir ${windows.sdk}/crt"
-                "/winsdkdir ${windows.sdk}/sdk"
-              ];
-            in
-            {
-              src = testFileset ./tests/plugin_manifests/package_manifest;
-              strictDeps = true;
-              nativeBuildInputs = with llvmPackages; [
-                clang-unwrapped # clang-cl (C/C++ compiler)
-                bintools-unwrapped # lld-link (linker)
-                llvm # llvm-lib (MSVC lib.exe equivalent, used by cc-rs)
-              ];
-              "CC_${envTarget}" = CC;
-              "CXX_${envTarget}" = CC;
-              "CFLAGS_${envTarget}" = CFLAGS;
-              "CXXFLAGS_${envTarget}" = CFLAGS;
-              "AR_${envTarget}" = "${llvmPackages.llvm}/bin/llvm-lib";
-              "CARGO_TARGET_${envTargetUpper}_LINKER" = "${llvmPackages.bintools-unwrapped}/bin/lld-link";
-              "CARGO_TARGET_${envTargetUpper}_RUSTFLAGS" = lib.concatStringsSep " " [
-                "-C link-arg=/LIBPATH:${windows.sdk}/crt/lib/x64"
-                "-C link-arg=/LIBPATH:${windows.sdk}/sdk/lib/ucrt/x64"
-                "-C link-arg=/LIBPATH:${windows.sdk}/sdk/lib/um/x64"
-              ];
-            };
+          inherit (pkgs) llvmPackages;
+          inherit (winPkgs) windows;
+          envTarget = builtins.replaceStrings [ "-" ] [ "_" ] rustcTarget;
+          envTargetUpper = lib.toUpper envTarget;
+          CC = "${llvmPackages.clang-unwrapped}/bin/clang-cl";
+          # Flags forwarded to clang-cl by cc-rs so it can locate MSVC headers and libs.
+          CFLAGS = lib.concatStringsSep " " [
+            "/vctoolsdir ${windows.sdk}/crt"
+            "/winsdkdir ${windows.sdk}/sdk"
+          ];
         in
-        rustPlatformCross.buildReaperExtension (crossArgs // {
+        {
           package = "package_manifest";
           plugin = "reaper_package_ext";
           target = rustcTarget;
+          src = testFileset ./tests/plugin_manifests/package_manifest;
+
+          strictDeps = true; # Enforce only buildPlatform deps in sandbox path
+          nativeBuildInputs = with llvmPackages; [
+            clang-unwrapped # clang-cl (C/C++ compiler)
+            bintools-unwrapped # lld-link (linker)
+            llvm # llvm-lib (MSVC lib.exe equivalent, used by cc-rs)
+          ];
+          "CC_${envTarget}" = CC;
+          "CXX_${envTarget}" = CC;
+          "CFLAGS_${envTarget}" = CFLAGS;
+          "CXXFLAGS_${envTarget}" = CFLAGS;
+          "AR_${envTarget}" = "${llvmPackages.llvm}/bin/llvm-lib";
+          "CARGO_TARGET_${envTargetUpper}_LINKER" = "${llvmPackages.bintools-unwrapped}/bin/lld-link";
+          "CARGO_TARGET_${envTargetUpper}_RUSTFLAGS" = lib.concatStringsSep " " [
+            "-C link-arg=/LIBPATH:${windows.sdk}/crt/lib/x64"
+            "-C link-arg=/LIBPATH:${windows.sdk}/sdk/lib/ucrt/x64"
+            "-C link-arg=/LIBPATH:${windows.sdk}/sdk/lib/um/x64"
+          ];
+
           # Checks could be ran using wine64, but in this case we only care
           # that the package was built and the output is the expected format
           doCheck = false;
@@ -284,8 +273,9 @@ in
               }
             true
           '';
-        });
-    };
+        }
+      );
+  };
 
   packages = {
     inherit (pkgs) cargo-reaper;

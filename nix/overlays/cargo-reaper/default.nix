@@ -81,10 +81,6 @@ in
         '';
         doCheck = false;
       });
-      # `cargo fmt` and `cargo deny` both shell out to `cargo metadata`
-      # internally, which wants a resolved dependency graph — so, unlike
-      # `taplo fmt` below, they need the same vendored-deps setup as the
-      # clippy/doc/nextest checks to stay network-free in the sandbox.
       cargo-fmt = rustPlatform.buildRustPackage (commonArgs // {
         pname = "${manifest.name}-fmt";
         nativeBuildInputs = commonArgs.nativeBuildInputs ++ [ prev.rustfmt ];
@@ -100,10 +96,9 @@ in
         '';
         doCheck = false;
       });
-      taplo-fmt = prev.runCommand "${manifest.name}-taplo-fmt"
-        {
-          nativeBuildInputs = [ prev.taplo ];
-        } ''
+      taplo-fmt = prev.runCommand "${manifest.name}-taplo-fmt" {
+        nativeBuildInputs = [ prev.taplo ];
+      } ''
         export HOME=$TMPDIR
         cd ${lib.sources.sourceFilesBySuffices src [ ".toml" ]}
         taplo fmt --check
@@ -148,77 +143,69 @@ in
     };
   };
 
-  rustPlatform = prev.rustPlatform.overrideScope (rfinal: rprev:
-    let
-      # `rustToolchain` is only ever set by a caller that needs a
-      # fenix-provided cross-target sysroot (see `crossChecks` in
-      # release.nix) — everywhere else this resolves to plain
-      # nixpkgs `rustPlatform.buildRustPackage`.
-      useFenix = rfinal ? rustToolchain;
-      buildRustPackage =
-        if useFenix then
-          (prev.makeRustPlatform {
-            rustc = rfinal.rustToolchain;
-            cargo = rfinal.rustToolchain;
-          }).buildRustPackage
-        else
-          rfinal.buildRustPackage
-        ;
-    in
-    {
-      buildReaperExtension =
-        { package
-        , plugin ? package
-        , target ? null
-        , ...
-        }@crateArgs:
-        let
-          # Run `cargo-reaper`, passing trailing args to the cargo invocation.
-          # We do not symlink the plugin since the `UserPlugins` directory is in
-          # the `$HOME` directory which is inaccessible to the sandbox.
-          buildPhaseCargoCommand = ''
-            cargo reaper build --no-symlink \
-              -p ${package} --lib \
-              --release ${lib.optionalString (target != null) ''\
-              --target ${target}
-            ''}
-          '';
-          # Include extension plugin in the build result.
-          installPhaseCommand = ''
-            mkdir -p $out/lib
-            mv target${lib.optionalString (target != null) "/${target}"}/release/${plugin}.* $out/lib
-          '';
-        in
-        buildRustPackage (crateArgs // {
-          pname = package;
-          # `buildRustPackage` requires a version to name the derivation;
-          # these are test-fixture builds with no meaningful version of
-          # their own, so a placeholder is fine unless the caller sets one.
-          version = crateArgs.version or "0.0.0";
-          cargoLock = crateArgs.cargoLock or {
-            lockFile = crateArgs.src + "/Cargo.lock";
-            allowBuiltinFetchGit = true;
-          };
-          # `buildPhase` above is already the meaningful check (the build
-          # either produces a working plugin or it doesn't) — running the
-          # default `checkPhase` on top would just recompile the whole
-          # dependency graph a second time for `cargo test` to find nothing.
-          # Off by default; callers that actually have tests can opt in.
-          doCheck = crateArgs.doCheck or false;
-          buildPhase = ''
-            runHook preBuild
-            ${buildPhaseCargoCommand}
-            runHook postBuild
-          '';
-          installPhase = ''
-            runHook preInstall
-            ${installPhaseCommand}
-            runHook postInstall
-          '';
-          nativeBuildInputs = (crateArgs.nativeBuildInputs or [ ]) ++ [
-            # Add `cargo-reaper` as a build time dependency of this derivation.
-            final.cargo-reaper
-          ];
-        });
-    });
+  # Plain nixpkgs rustPlatform, no fenix awareness at all — callers that need
+  # a fenix-provided cross-target sysroot (see `crossChecks` in release.nix)
+  # override `buildRustPackage` on their own locally-scoped `overrideScope`
+  # call instead of this overlay needing to know fenix exists.
+  rustPlatform = prev.rustPlatform.overrideScope (rfinal: rprev: {
+    buildReaperExtension =
+      { package
+      , plugin ? package
+      , target ? null
+      , ...
+      }@crateArgs:
+      let
+        # Run `cargo-reaper`, passing trailing args to the cargo invocation.
+        # We do not symlink the plugin since the `UserPlugins` directory is in
+        # the `$HOME` directory which is inaccessible to the sandbox.
+        buildPhaseCargoCommand = ''
+          cargo reaper build --no-symlink \
+            -p ${package} --lib \
+            --release ${lib.optionalString (target != null) ''\
+            --target ${target}
+          ''}
+        '';
+        # Include extension plugin in the build result.
+        installPhaseCommand = ''
+          mkdir -p $out/lib
+          mv target${lib.optionalString (target != null) "/${target}"}/release/${plugin}.* $out/lib
+        '';
+      in
+      rfinal.buildRustPackage (crateArgs // {
+        pname = package;
+        # `buildRustPackage` requires a version to name the derivation;
+        # these are test-fixture builds with no meaningful version of
+        # their own, so a placeholder is fine unless the caller sets one.
+        version = crateArgs.version or "0.0.0";
+        cargoLock = crateArgs.cargoLock or {
+          lockFile = crateArgs.src + "/Cargo.lock";
+          allowBuiltinFetchGit = true;
+        };
+        # `buildPhase` above is already the meaningful check (the build
+        # either produces a working plugin or it doesn't) — running the
+        # default `checkPhase` on top would just recompile the whole
+        # dependency graph a second time for `cargo test` to find nothing.
+        # Off by default; callers that actually have tests can opt in.
+        doCheck = crateArgs.doCheck or false;
+        buildPhase = ''
+          runHook preBuild
+          ${buildPhaseCargoCommand}
+          runHook postBuild
+        '';
+        installPhase = ''
+          runHook preInstall
+          ${installPhaseCommand}
+          runHook postInstall
+        '';
+        nativeBuildInputs = (crateArgs.nativeBuildInputs or [ ]) ++ [
+          # Add `cargo-reaper` as a build time dependency of this derivation.
+          # `buildPackages` matters when this overlay ends up applied within
+          # a cross package set (e.g. `pkgsCross.x86_64-windows` in
+          # `crossChecks`) — plain `final.cargo-reaper` would resolve to a
+          # `cargo-reaper` built *for* that target, unable to actually run
+          # here to invoke `cargo reaper build`.
+          final.buildPackages.cargo-reaper
+        ];
+      });
+  });
 }
