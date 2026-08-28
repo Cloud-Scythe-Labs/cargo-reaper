@@ -5,18 +5,12 @@
 
   outputs = _:
     let
-      overlays.default = import ./nix/overlays/cargo-reaper;
+      overlays.default = import ./overlay.nix;
 
-      eachSystem = f: builtins.listToAttrs (map (system:
-        let
-          inputs = import ./nix/tamal { inherit system; };
-        in
-        {
+      eachSystem = f: builtins.listToAttrs (map
+        (system: {
           name = system;
-          value = f (import inputs.nixpkgs {
-            inherit system;
-            overlays = [ overlays.default ];
-          });
+          value = f (import ./release.nix { inherit system; });
         })
         [
           "x86_64-linux"
@@ -27,8 +21,9 @@
     {
       inherit overlays;
 
-      apps = eachSystem (pkgs:
+      apps = eachSystem (release:
         let
+          inherit (release) pkgs;
           inherit (pkgs) lib;
           cargo-reaper = {
             type = "app";
@@ -45,5 +40,7 @@
           inherit cargo-reaper;
           default = cargo-reaper;
         });
+
+      formatter = eachSystem (release: release.fmt);
     };
 }

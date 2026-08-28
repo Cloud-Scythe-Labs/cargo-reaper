@@ -1,8 +1,6 @@
 name: Nix Build
-
 on:
   workflow_call:
-
 jobs:
   nix-build:
     name: Nix Build (${{ matrix.os }})
@@ -13,23 +11,18 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-
     steps:
       - uses: actions/checkout@v7
-
       - name: Install Nix
         uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             extra-substituters = https://cloud-scythe-labs.cachix.org
             extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
-
       - name: Build packages
         run: nix-build release.nix -A packages --keep-going
-
       - name: Build checks
         run: nix-build release.nix -A checks --keep-going
-
       - name: Build Windows cross check
         if: matrix.os == 'ubuntu-latest'
         run: nix-build release.nix -A crossChecks --keep-going

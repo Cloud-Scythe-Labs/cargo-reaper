@@ -1,30 +1,23 @@
 name: Deploy mdBook to GitHub Pages
-
 on:
   push:
     branches:
       - master
-
 permissions:
   contents: write # Required to push to gh-pages
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v7
-
       - name: Install Nix
         uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             extra-substituters = https://cloud-scythe-labs.cachix.org
             extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
-
       - name: Build Docs
         run: nix-shell -p mdbook --run "mdbook build docs"
-
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:

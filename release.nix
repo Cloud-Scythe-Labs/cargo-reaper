@@ -1,12 +1,12 @@
+{ system ? builtins.currentSystem }:
+
 let
-  inputs = import ./nix/tamal { };
+  inputs = import ./nix/tamal { inherit system; };
 
   inherit (pkgs) lib stdenv;
   pkgs = import inputs.nixpkgs {
-    system = builtins.currentSystem;
-    overlays = [
-      (import ./nix/overlays/cargo-reaper)
-    ];
+    inherit system;
+    overlays = [ (import ./overlay.nix) ];
     config = {
       allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
         "reaper"
@@ -17,174 +17,49 @@ let
     };
   };
 
-  # The fileset for each test derivation.
-  testFileset = root: lib.fileset.toSource {
-    inherit root;
-    fileset = lib.fileset.unions [
-      (root + "/Cargo.toml")
-      (root + "/Cargo.lock")
-      (root + "/src")
-      (lib.fileset.cargoReaperConfigFilter (root + "/reaper.toml"))
-    ];
-  };
-
-  checks =
-    let
-      inherit (pkgs) rustPlatform;
-
-      commonTestArgs = src: {
-        inherit src;
-        strictDeps = true;
-        cargoLock = {
-          lockFile = src + "/Cargo.lock";
-          allowBuiltinFetchGit = true;
-        };
-      } // lib.optionalAttrs stdenv.isLinux {
-        # Rust 1.96+ uses lld with -nodefaultlibs, which means libstdc++ is no
-        # longer implicitly findable at runtime in the Nix sandbox for test binaries
-        # compiled by cargo during the check phase.
-        LD_LIBRARY_PATH = lib.makeLibraryPath [ stdenv.cc.cc.lib ];
-      };
-
-      test-cargo-reaper-build-package-manifest = rustPlatform.buildReaperExtension (commonTestArgs (testFileset ./tests/plugin_manifests/package_manifest) // {
-        package = "package_manifest";
-        plugin = "reaper_package_ext";
-      });
-
-      test-cargo-reaper-build-workspace-manifest = rustPlatform.buildReaperExtension (commonTestArgs (testFileset ./tests/plugin_manifests/workspace_manifest) // {
-        package = "extension_0";
-        plugin = "reaper_ext_0";
-      });
-
-      test-cargo-reaper-build-workspace-package-manifest = rustPlatform.buildReaperExtension (commonTestArgs (testFileset ./tests/plugin_manifests/workspace_package_manifest) // {
-        package = "workspace_package_manifest";
-        plugin = "reaper_workspace_package_ext";
-      });
-    in
-    {
-      # Build the crate as part of `checks` for convenience
-      inherit (pkgs) cargo-reaper;
-
-      inherit
-        test-cargo-reaper-build-package-manifest
-        test-cargo-reaper-build-workspace-manifest
-        test-cargo-reaper-build-workspace-package-manifest
-        ;
-
-      inherit (pkgs.cargo-reaper.passthru.tests)
-        cargo-clippy
-        cargo-doc
-        cargo-fmt
-        taplo-fmt
-        cargo-deny
-        ;
-
-      test-cargo-reaper-new-ext = stdenv.mkDerivation {
-        name = "test-cargo-reaper-new-ext";
-        buildInputs = [
-          pkgs.cargo-reaper
-        ];
-        doCheck = true;
-        phases = [
-          "buildPhase"
-          "checkPhase"
-          "installPhase"
-        ];
-        buildPhase = ''
-          cargo-reaper new --template ext reaper_test
-        '';
-        checkPhase = ''
-          if [ ! -d "reaper_test" ]; then
-            exit 1
-          fi
-        '';
-        installPhase = ''
-          mkdir -p $out
-          mv reaper_test $out/
-        '';
-      };
-      test-cargo-reaper-new-vst = stdenv.mkDerivation {
-        name = "test-cargo-reaper-new-vst";
-        buildInputs = [
-          pkgs.cargo-reaper
-        ];
-        doCheck = true;
-        phases = [
-          "buildPhase"
-          "checkPhase"
-          "installPhase"
-        ];
-        buildPhase = ''
-          cargo-reaper new --template vst reaper_test
-        '';
-        checkPhase = ''
-          if [ ! -d "reaper_test" ]; then
-            exit 1
-          fi
-        '';
-        installPhase = ''
-          mkdir -p $out
-          mv reaper_test $out/
-        '';
-      };
-      test-cargo-reaper-list-package-manifest = stdenv.mkDerivation {
-        name = "test-cargo-reaper-list-package-manifest";
-        src = testFileset ./tests/plugin_manifests/package_manifest;
-        buildInputs = [
-          pkgs.cargo-reaper
-        ];
-        phases = [
-          "unpackPhase"
-          "buildPhase"
-          "installPhase"
-        ];
-        buildPhase = ''
-          cargo-reaper list
-        '';
-        installPhase = ''
-          mkdir -p $out
-        '';
-      };
-      test-cargo-reaper-list-workspace-manifest = stdenv.mkDerivation {
-        name = "test-cargo-reaper-list-workspace-manifest";
-        src = testFileset ./tests/plugin_manifests/workspace_manifest;
-        buildInputs = [
-          pkgs.cargo-reaper
-        ];
-        phases = [
-          "unpackPhase"
-          "buildPhase"
-          "installPhase"
-        ];
-        buildPhase = ''
-          cargo-reaper list
-        '';
-        installPhase = ''
-          mkdir -p $out
-        '';
-      };
-      test-cargo-reaper-list-workspace-package-manifest = stdenv.mkDerivation {
-        name = "test-cargo-reaper-list-workspace-package-manifest";
-        src = testFileset ./tests/plugin_manifests/workspace_package_manifest;
-        buildInputs = [
-          pkgs.cargo-reaper
-        ];
-        phases = [
-          "unpackPhase"
-          "buildPhase"
-          "installPhase"
-        ];
-        buildPhase = ''
-          cargo-reaper list
-        '';
-        installPhase = ''
-          mkdir -p $out
-        '';
-      };
+  treefmtEval = (import inputs.treefmt).evalModule pkgs {
+    projectRootFile = "release.nix";
+    programs = {
+      nixpkgs-fmt.enable = true;
+      rustfmt.enable = true;
+      taplo.enable = true;
+      mdformat.enable = true;
+      yamlfmt.enable = true;
     };
+  };
 in
 {
-  inherit checks;
+  inherit pkgs;
+
+  default = pkgs.cargo-reaper;
+
+  fmt = treefmtEval.config.build.wrapper;
+
+  checks = {
+    inherit (pkgs) cargo-reaper;
+    inherit (pkgs.cargo-reaper.passthru.tests)
+      cargo-clippy
+      cargo-doc
+      cargo-fmt
+      taplo-fmt
+      cargo-deny
+      ;
+
+    fmt = treefmtEval.config.build.check (lib.cleanSourceWith {
+      src = lib.cleanSource ./.;
+      filter = path: type: baseNameOf path != "target";
+    });
+
+    test-cargo-reaper-build-package-manifest = pkgs.callPackage ./nix/tests/plugin_manifests/package_manifest { };
+    test-cargo-reaper-build-workspace-manifest = pkgs.callPackage ./nix/tests/plugin_manifests/workspace_manifest { };
+    test-cargo-reaper-build-workspace-package-manifest = pkgs.callPackage ./nix/tests/plugin_manifests/workspace_package_manifest { };
+
+    test-cargo-reaper-new-ext = pkgs.callPackage ./nix/tests/new-ext { };
+    test-cargo-reaper-new-vst = pkgs.callPackage ./nix/tests/new-vst { };
+    test-cargo-reaper-list-package-manifest = pkgs.callPackage ./nix/tests/list-package-manifest { };
+    test-cargo-reaper-list-workspace-manifest = pkgs.callPackage ./nix/tests/list-workspace-manifest { };
+    test-cargo-reaper-list-workspace-package-manifest = pkgs.callPackage ./nix/tests/list-workspace-package-manifest { };
+  };
 
   crossChecks = lib.optionalAttrs stdenv.isLinux {
     test-cargo-reaper-build-cross-windows =
@@ -223,7 +98,10 @@ in
           package = "package_manifest";
           plugin = "reaper_package_ext";
           target = rustcTarget;
-          src = testFileset ./tests/plugin_manifests/package_manifest;
+          src = lib.cleanSourceWith {
+            src = lib.cleanSource ./nix/tests/plugin_manifests/package_manifest;
+            filter = path: type: baseNameOf path != "target" && !lib.hasSuffix ".nix" (baseNameOf path);
+          };
 
           strictDeps = true; # Enforce only buildPlatform deps in sandbox path
           nativeBuildInputs = with llvmPackages; [
@@ -276,18 +154,17 @@ in
       );
   };
 
-  packages = {
-    inherit (pkgs) cargo-reaper;
-    default = pkgs.cargo-reaper;
+  nixosTests = {
+    test-cargo-reaper-link = pkgs.callPackage ./nixos/tests/link { };
+    test-cargo-reaper-run = pkgs.callPackage ./nixos/tests/run { };
+    test-cargo-reaper-clean = pkgs.callPackage ./nixos/tests/clean { };
   };
-
-  formatter = pkgs.nixpkgs-fmt;
 
   devShell = pkgs.mkShell {
     inputsFrom = builtins.attrValues pkgs.cargo-reaper.passthru.tests;
     packages = with pkgs; [
       nil
-      nixpkgs-fmt
+      nixtamal
       mdbook
       cargo-reaper
       rust-analyzer

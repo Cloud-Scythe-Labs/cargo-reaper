@@ -2,10 +2,10 @@ final: prev:
 let
   inherit (prev) lib rustPlatform;
 
-  manifest = (builtins.fromTOML (builtins.readFile ../../../Cargo.toml)).package;
+  manifest = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package;
   src = lib.cleanSourceWith {
     inherit (manifest) name;
-    src = lib.cleanSource ../../../.;
+    src = lib.cleanSource ./.;
     filter = path: type:
       let
         path' = (toString path);
@@ -81,29 +81,6 @@ in
         '';
         doCheck = false;
       });
-      cargo-fmt = rustPlatform.buildRustPackage (commonArgs // {
-        pname = "${manifest.name}-fmt";
-        nativeBuildInputs = commonArgs.nativeBuildInputs ++ [ prev.rustfmt ];
-        buildPhase = ''
-          runHook preBuild
-          cargo fmt --check
-          runHook postBuild
-        '';
-        installPhase = ''
-          runHook preInstall
-          touch $out
-          runHook postInstall
-        '';
-        doCheck = false;
-      });
-      taplo-fmt = prev.runCommand "${manifest.name}-taplo-fmt" {
-        nativeBuildInputs = [ prev.taplo ];
-      } ''
-        export HOME=$TMPDIR
-        cd ${lib.sources.sourceFilesBySuffices src [ ".toml" ]}
-        taplo fmt --check
-        touch $out
-      '';
       cargo-deny = rustPlatform.buildRustPackage (commonArgs // {
         pname = "${manifest.name}-deny";
         nativeBuildInputs = commonArgs.nativeBuildInputs ++ [ prev.cargo-deny ];
@@ -122,12 +99,6 @@ in
     };
   });
 
-  lib = prev.lib // {
-    fileset = prev.lib.fileset // {
-      cargoReaperConfigFilter = from: prev.lib.fileset.fileFilter (file: (builtins.match "\.?reaper\.toml" file.name) != null) from;
-    };
-  };
-
   rustPlatform = prev.rustPlatform.overrideScope (rfinal: rprev: {
     buildReaperExtension =
       { package
@@ -135,23 +106,6 @@ in
       , target ? null
       , ...
       }@crateArgs:
-      let
-        # Run `cargo-reaper`, passing trailing args to the cargo invocation.
-        # We do not symlink the plugin since the `UserPlugins` directory is in
-        # the `$HOME` directory which is inaccessible to the sandbox.
-        buildPhaseCargoCommand = ''
-          cargo reaper build --no-symlink \
-            -p ${package} --lib \
-            --release ${lib.optionalString (target != null) ''\
-            --target ${target}
-          ''}
-        '';
-        # Include extension plugin in the build result.
-        installPhaseCommand = ''
-          mkdir -p $out/lib
-          mv target${lib.optionalString (target != null) "/${target}"}/release/${plugin}.* $out/lib
-        '';
-      in
       rfinal.buildRustPackage (crateArgs // {
         pname = package;
         version = crateArgs.version or "0.0.0";
@@ -160,14 +114,23 @@ in
           allowBuiltinFetchGit = true;
         };
         doCheck = crateArgs.doCheck or false;
+        # Run `cargo-reaper`, passing trailing args to the cargo invocation.
+        # We do not symlink the plugin since the `UserPlugins` directory is in
+        # the `$HOME` directory which is inaccessible to the sandbox.
         buildPhase = ''
           runHook preBuild
-          ${buildPhaseCargoCommand}
+          cargo reaper build --no-symlink \
+            -p ${package} --lib \
+            --release ${lib.optionalString (target != null) ''\
+            --target ${target}
+          ''}
           runHook postBuild
         '';
+        # Include extension plugin in the build result.
         installPhase = ''
           runHook preInstall
-          ${installPhaseCommand}
+          mkdir -p $out/lib
+          mv target${lib.optionalString (target != null) "/${target}"}/release/${plugin}.* $out/lib
           runHook postInstall
         '';
         nativeBuildInputs = (crateArgs.nativeBuildInputs or [ ]) ++ [

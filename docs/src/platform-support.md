@@ -14,6 +14,7 @@ Which can then be cross referenced against the Rust target list:
 - [Rust Platform Support](https://doc.rust-lang.org/rustc/platform-support.html)
 
 Or via `rustc` from the terminal:
+
 ```sh
 rustc --print target-list
 ```

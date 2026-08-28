@@ -1,7 +1,7 @@
 // ┏┓╻+╻ ╱┏┳┓┏┓┏┳┓┏┓╻
 // ┃┃┃┃┗━┓╹┃╹┣┫┃┃┃┣┫┃   Read the manpage:
 // ╹┗┛╹╱ ╹ ╹ ╹╹╹ ╹╹╹┗┛  $ man nixtamal-manifest
-version "1.0.0"
+version "1.1.0"
 inputs {
 	nixpkgs {
 		archive {
@@ -20,6 +20,16 @@ inputs {
 		hash algorithm=SHA-256
 		fresh-cmd {
 			$ git ls-remote --branches "https://github.com/nix-community/fenix.git" main
+			| cut -f1
+		}
+	}
+	treefmt {
+		archive {
+			url "https://github.com/numtide/treefmt-nix/archive/{{fresh_value}}.tar.gz"
+		}
+		hash algorithm=SHA-256
+		fresh-cmd {
+			$ git ls-remote --branches "https://github.com/numtide/treefmt-nix.git" main
 			| cut -f1
 		}
 	}

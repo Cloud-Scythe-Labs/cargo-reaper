@@ -1,15 +1,19 @@
 # cargo-reaper-completions
 
 ## NAME
+
 cargo-reaper-completions -- Generate shell completion scripts.
 
 ## SYNOPSIS
+
 `cargo-reaper completions` _shell_
 
 ## DESCRIPTION
+
 Generate shell completions for the `cargo-reaper` command line application.
 
 The following shells are supported:
+
 - [Bash](#bash)
 - [Elvish](#elvish)
 - [Fish](#fish)
@@ -20,7 +24,8 @@ The following shells are supported:
 
 `-h` </br>
 `--help` </br>
-  <dd>Print help information.</dd>
+
+<dd>Print help information.</dd>
 
 ## EXAMPLES
 
@@ -57,4 +62,3 @@ cargo-reaper completions powershell > $HOME/Documents/PowerShell/cargo-reaper.ps
 ```sh
 cargo-reaper completions zsh > /usr/share/zsh/site-functions/_cargo-reaper
 ```
-

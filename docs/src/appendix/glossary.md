@@ -7,8 +7,8 @@ This is different for each supported platform:
 
 - Linux:
   - A global default is not predictable since Linux does not have a canonical package manager. Instead, `cargo-reaper` uses the
-  [`which`](https://crates.io/crates/which) crate's [`which::which_global`](https://docs.rs/which/7.0.3/which/fn.which_global.html)
-  function to determine its location.
+    [`which`](https://crates.io/crates/which) crate's [`which::which_global`](https://docs.rs/which/7.0.3/which/fn.which_global.html)
+    function to determine its location.
 - Darwin (MacOS) -- `/Applications/REAPER.app`
 - Windows:
   - x86 (32bit) -- `C:\Program Files (x86)\REAPER\reaper.exe`

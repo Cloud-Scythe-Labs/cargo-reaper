@@ -1,9 +1,9 @@
-use reaper_macros::reaper_extension_plugin;
-use std::error::Error;
-use std::sync::OnceLock;
 use fragile::Fragile;
 use reaper_low::PluginContext;
+use reaper_macros::reaper_extension_plugin;
 use reaper_medium::{ProjectRef, Reaper, ReaperSession};
+use std::error::Error;
+use std::sync::OnceLock;
 
 /// REAPER will call this extension entry-point function once when it's starting.
 #[reaper_extension_plugin]
@@ -42,7 +42,10 @@ fn print_project_file_path(reaper: &Reaper) {
 }
 
 fn reaper_session() -> &'static ReaperSession {
-    REAPER_SESSION.get().expect("ReaperSession hasn't been set as static variable yet").get()
+    REAPER_SESSION
+        .get()
+        .expect("ReaperSession hasn't been set as static variable yet")
+        .get()
 }
 
 /// The static variable that keeps the reaper-medium [`ReaperSession`] in memory while REAPER

@@ -1,11 +1,9 @@
 name: Update Cachix
-
 on:
   workflow_call:
     secrets:
       CACHIX_AUTH_TOKEN:
         required: true
-
 jobs:
   update-cachix:
     name: Update Cachix (${{ matrix.os }})
@@ -16,30 +14,25 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-
       - name: Install Nix
         uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             extra-substituters = https://cloud-scythe-labs.cachix.org
             extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
-
       - name: Install and configure Cachix
         uses: cachix/cachix-action@v17
         with:
           name: cloud-scythe-labs
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-
       # Only packages and the devShell are built here, since everything
       # built in this job gets pushed to the cache by cachix-action above —
       # checks/tests are deliberately never built in this job so their
       # outputs never end up in the shared cache.
       - name: Build packages
         run: nix-build release.nix -A packages --keep-going
-
       - name: Build devShell
         run: nix-build shell.nix --keep-going

@@ -1,12 +1,15 @@
 # cargo-reaper-new
 
 ## NAME
+
 cargo-reaper-new -- Create a new REAPER extension plugin.
 
 ## SYNOPSIS
-`cargo-reaper new` [_options_] _path_
+
+`cargo-reaper new` \[_options_\] _path_
 
 ## DESCRIPTION
+
 This command will create a new Cargo package in the given directory that is set up for use with `cargo-reaper`.
 This includes a simple template with a `Cargo.toml` manifest, sample source file, `reaper.toml` configuration file, and a `.gitignore` file.
 
@@ -14,15 +17,18 @@ This includes a simple template with a `Cargo.toml` manifest, sample source file
 
 `-t` </br>
 `--template` </br>
-  <dd>The type of template to use.</dd>
+
+<dd>The type of template to use.</dd>
 
 `-h` </br>
 `--help` </br>
-  <dd>Print help information.</dd>
+
+<dd>Print help information.</dd>
 
 ## EXAMPLES
 
 1. Initialize a new extension plugin.
+
 ```sh
 cargo reaper new reaper_my_plugin
 ```
@@ -33,10 +39,11 @@ cargo reaper new reaper_my_plugin
 > however, `cargo-reaper` will throw an error and refuse to compile if an extension plugin listed does not meet this condition.
 
 2. Initialize a new VST plugin.
+
 ```sh
 cargo reaper new --template vst reaper_my_plugin
 ```
 
-> \[!WARNING\]
+> [!WARNING]
 > Currently the `reaper-rs` library supports using the `vst` crate which is deprecated. In an effort to maintain support for `reaper-rs`,
 > `cargo-reaper` can initialize VST plugins, but it does not add any conveniences like it does for extension development.
