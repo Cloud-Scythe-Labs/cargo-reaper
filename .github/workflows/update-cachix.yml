@@ -28,11 +28,11 @@ jobs:
         with:
           name: cloud-scythe-labs
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      # Only packages and the devShell are built here, since everything
+      # Only the package and the devShell are built here, since everything
       # built in this job gets pushed to the cache by cachix-action above —
       # checks/tests are deliberately never built in this job so their
       # outputs never end up in the shared cache.
-      - name: Build packages
-        run: nix-build release.nix -A packages --keep-going
+      - name: Build package
+        run: nix-build
       - name: Build devShell
-        run: nix-build shell.nix --keep-going
+        run: nix-build shell.nix

@@ -40,8 +40,6 @@ in
     inherit (pkgs.cargo-reaper.passthru.tests)
       cargo-clippy
       cargo-doc
-      cargo-fmt
-      taplo-fmt
       cargo-deny
       ;
 
