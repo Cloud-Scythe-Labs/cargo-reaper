@@ -6,7 +6,7 @@ in
 testers.runNixOSTest {
   name = "test-cargo-reaper-link";
   node.pkgs = lib.mkForce pkgsLinux;
-  nodes.corro = import ../profile.nix;
+  containers.corro = import ../profile.nix;
   testScript = ''
     corro.start()
     corro.wait_for_unit("multi-user.target")

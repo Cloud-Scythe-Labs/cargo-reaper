@@ -13,7 +13,7 @@ in
 testers.runNixOSTest {
   name = "test-cargo-reaper-run";
   node.pkgs = lib.mkForce pkgsLinux;
-  nodes.corro = {
+  containers.corro = {
     imports = [ ../profile.nix ];
     environment.systemPackages = with pkgsLinux; [
       cargo
