@@ -6,15 +6,12 @@ on:
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
-
 permissions: read-all
-
 jobs:
-  nix-flake-check:
-    uses: ./.github/workflows/nix-flake-check.yml
+  nix-build:
+    uses: ./.github/workflows/nix-build.yml
     permissions:
       id-token: write
       contents: read
-
   build-windows-msvc:
     uses: ./.github/workflows/build-windows-msvc.yml

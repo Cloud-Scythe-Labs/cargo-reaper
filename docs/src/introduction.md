@@ -4,8 +4,8 @@
 
 # Introduction
 
-`cargo-reaper` is a Cargo plugin designed to streamline the development of REAPER extension plugins with Rust.  
-It serves as a companion for the [`reaper-rs`](https://github.com/helgoboss/reaper-rs) library,  
+`cargo-reaper` is a Cargo plugin designed to streamline the development of REAPER extension plugins with Rust.\
+It serves as a companion for the [`reaper-rs`](https://github.com/helgoboss/reaper-rs) library,\
 which provides Rust bindings and tools for creating REAPER plugins -- including a procedural macro that bootstraps your plugin as a native REAPER extension.
 
 </td>

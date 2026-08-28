@@ -17,7 +17,7 @@ pub(crate) fn new(template: PluginTemplate, path: path::PathBuf) -> anyhow::Resu
         "    {} dynamically linked library (cdylib) `{}` REAPER {:?} plugin package",
         "Creating".green().bold(),
         package_name,
-        &template
+        template
     );
     new_from_template(template, &path, &package_name)
         .map_err(|err| anyhow::anyhow!("failed to create new REAPER plugin project: {err:?}"))

@@ -27,7 +27,7 @@ cargo reaper run
 
 ### VST Plugins
 
-> \[!WARNING\]
+> [!WARNING]
 > Currently the `reaper-rs` library supports using the `vst` crate which is deprecated. In an effort to maintain support for `reaper-rs`,
 > `cargo-reaper` can initialize VST plugins, but it does not add any conveniences like it does for extension development.
 

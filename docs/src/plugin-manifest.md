@@ -3,9 +3,9 @@
 There are a few necessities for `cargo-reaper` to recognize an extension plugin that is declared in a [configuration file](./configuration-file.md).
 
 1. The cargo manifest must be a [_package_](https://doc.rust-lang.org/cargo/appendix/glossary.html#package).
-2. The package must include a [_library target_](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target).
-3. The library target must include a [`name`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-name-field) field.
-4. The library target must include [`cdylib`](https://doc.rust-lang.org/reference/linkage.html#r-link.cdylib) in the [`crate-type`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-crate-type-field) field.
+1. The package must include a [_library target_](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target).
+1. The library target must include a [`name`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-name-field) field.
+1. The library target must include [`cdylib`](https://doc.rust-lang.org/reference/linkage.html#r-link.cdylib) in the [`crate-type`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-crate-type-field) field.
 
 The above should be true whether the project is a single package, workspace with multiple packages or workspace package.
 
@@ -24,6 +24,7 @@ edition = "2024"
 name = "my_extension_plugin"
 crate-type = ["cdylib"]
 ```
+
 ```toml
 # reaper.toml
 [extension_plugins]
@@ -45,6 +46,7 @@ each of which being a package manifest meeting the [plugin manifest criteria](#p
 resolver = "2"
 members = ["crates/*"]
 ```
+
 ```toml
 # reaper.toml
 [extension_plugins]
@@ -71,6 +73,7 @@ edition = "2024"
 name = "my_extension_plugin"
 crate-type = ["cdylib"]
 ```
+
 ```toml
 # reaper.toml
 [extension_plugins]

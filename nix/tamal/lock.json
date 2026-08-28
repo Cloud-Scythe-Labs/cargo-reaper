@@ -1,0 +1,8 @@
+{"v":"1.1.0"
+,"i":{
+"nixpkgs":{"sn":"nixpkgs-src","kd":[1,{"ft":0,"ur":"https://github.com/NixOS/nixpkgs/archive/8c3cede7ddc26bd659d2d383b5610efbd2c7a16e.tar.gz","ms":[]}],"ha":{"al":0,"vl":"sha256-rppURzHviaQN131F+nLiLdGfcb0uCd9gGP0E5+iw9MI="},"fv":"8c3cede7ddc26bd659d2d383b5610efbd2c7a16e","ps":[]}
+,"fenix":{"sn":"fenix-src","kd":[1,{"ft":0,"ur":"https://github.com/nix-community/fenix/archive/45d045a58ed69993eb1d349a86def638fea93a9f.tar.gz","ms":[]}],"ha":{"al":0,"vl":"sha256-iunnvo2ZqbFOwp/LXL3vtlbaG+45FuiHk+YKpbSoAec="},"fv":"45d045a58ed69993eb1d349a86def638fea93a9f","ps":[]}
+,"treefmt":{"sn":"treefmt-src","kd":[1,{"ft":0,"ur":"https://github.com/numtide/treefmt-nix/archive/27b3b12a8e6375f28ebe122f07d230ca5459bbfa.tar.gz","ms":[]}],"ha":{"al":0,"vl":"sha256-WSFCsDSE5ffgD2MqzkM2CYjeFiKhRF/dJUN8uedb6YE="},"fv":"27b3b12a8e6375f28ebe122f07d230ca5459bbfa","ps":[]}
+}
+,"p":{}
+}
