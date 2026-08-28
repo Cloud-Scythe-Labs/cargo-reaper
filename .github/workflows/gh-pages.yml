@@ -17,11 +17,9 @@ jobs:
             extra-substituters = https://cloud-scythe-labs.cachix.org
             extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
       - name: Build Docs
-        run: |
-          nix-shell -E 'let pkgs = (import ./release.nix { }).pkgs; in pkgs.mkShell { buildInputs = [ pkgs.mdbook ]; }' \
-            --run "mdbook build docs"
+        run: nix-build release.nix -A docs -o docs-result
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/book
+          publish_dir: ./docs-result

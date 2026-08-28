@@ -35,6 +35,22 @@ in
 
   fmt = treefmtEval.config.build.wrapper;
 
+  docs = pkgs.stdenvNoCC.mkDerivation {
+    pname = "cargo-reaper-docs";
+    version = pkgs.cargo-reaper.version;
+    src = lib.cleanSourceWith {
+      src = lib.cleanSource ./docs;
+      filter = path: type: baseNameOf path != "book";
+    };
+    nativeBuildInputs = [ pkgs.mdbook ];
+    buildPhase = ''
+      runHook preBuild
+      mdbook build --dest-dir $out .
+      runHook postBuild
+    '';
+    dontInstall = true;
+  };
+
   checks = {
     inherit (pkgs) cargo-reaper;
     inherit (pkgs.cargo-reaper.passthru.tests)
