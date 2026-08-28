@@ -119,21 +119,6 @@ in
         '';
         doCheck = false;
       });
-      cargo-nextest = rustPlatform.buildRustPackage (commonArgs // {
-        pname = "${manifest.name}-nextest";
-        nativeBuildInputs = commonArgs.nativeBuildInputs ++ [ prev.cargo-nextest ];
-        buildPhase = ''
-          runHook preBuild
-          cargo nextest run --no-tests=warn
-          runHook postBuild
-        '';
-        installPhase = ''
-          runHook preInstall
-          touch $out
-          runHook postInstall
-        '';
-        doCheck = false;
-      });
     };
   });
 
@@ -143,10 +128,6 @@ in
     };
   };
 
-  # Plain nixpkgs rustPlatform, no fenix awareness at all — callers that need
-  # a fenix-provided cross-target sysroot (see `crossChecks` in release.nix)
-  # override `buildRustPackage` on their own locally-scoped `overrideScope`
-  # call instead of this overlay needing to know fenix exists.
   rustPlatform = prev.rustPlatform.overrideScope (rfinal: rprev: {
     buildReaperExtension =
       { package
@@ -173,19 +154,11 @@ in
       in
       rfinal.buildRustPackage (crateArgs // {
         pname = package;
-        # `buildRustPackage` requires a version to name the derivation;
-        # these are test-fixture builds with no meaningful version of
-        # their own, so a placeholder is fine unless the caller sets one.
         version = crateArgs.version or "0.0.0";
         cargoLock = crateArgs.cargoLock or {
           lockFile = crateArgs.src + "/Cargo.lock";
           allowBuiltinFetchGit = true;
         };
-        # `buildPhase` above is already the meaningful check (the build
-        # either produces a working plugin or it doesn't) — running the
-        # default `checkPhase` on top would just recompile the whole
-        # dependency graph a second time for `cargo test` to find nothing.
-        # Off by default; callers that actually have tests can opt in.
         doCheck = crateArgs.doCheck or false;
         buildPhase = ''
           runHook preBuild
@@ -199,11 +172,6 @@ in
         '';
         nativeBuildInputs = (crateArgs.nativeBuildInputs or [ ]) ++ [
           # Add `cargo-reaper` as a build time dependency of this derivation.
-          # `buildPackages` matters when this overlay ends up applied within
-          # a cross package set (e.g. `pkgsCross.x86_64-windows` in
-          # `crossChecks`) — plain `final.cargo-reaper` would resolve to a
-          # `cargo-reaper` built *for* that target, unable to actually run
-          # here to invoke `cargo reaper build`.
           final.buildPackages.cargo-reaper
         ];
       });

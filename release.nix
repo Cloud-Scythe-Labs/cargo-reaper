@@ -77,7 +77,6 @@ let
         cargo-fmt
         taplo-fmt
         cargo-deny
-        cargo-nextest
         ;
 
       test-cargo-reaper-new-ext = stdenv.mkDerivation {
@@ -284,17 +283,17 @@ in
 
   formatter = pkgs.nixpkgs-fmt;
 
-  devShells = {
-    default = pkgs.mkShell {
-      packages = with pkgs; [
-        nil
-        nixpkgs-fmt
-        mdbook
-        cargo-reaper
-        reaper
-      ] ++ lib.optionals stdenv.isLinux [
-        xdotool
-      ];
-    };
+  devShell = pkgs.mkShell {
+    inputsFrom = builtins.attrValues pkgs.cargo-reaper.passthru.tests;
+    packages = with pkgs; [
+      nil
+      nixpkgs-fmt
+      mdbook
+      cargo-reaper
+      rust-analyzer
+      reaper
+    ] ++ lib.optionals stdenv.isLinux [
+      xdotool
+    ];
   };
 }

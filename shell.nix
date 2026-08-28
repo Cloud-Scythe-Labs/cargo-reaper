@@ -1,1 +1,1 @@
-(import ./release.nix { }).devShells.default
+(import ./release.nix).devShell
