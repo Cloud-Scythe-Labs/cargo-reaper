@@ -16,8 +16,8 @@
         <link rel="icon" href="favicon-e338087d.svg">
         <link rel="shortcut icon" href="favicon-a6d0c16f.png">
         <link rel="stylesheet" href="css/variables-8adf115d.css">
-        <link rel="stylesheet" href="css/general-e96d0476.css">
-        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
         <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-647707ff.js";
+            window.path_to_searchindex_js = "searchindex-a59c99ad.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-1b32ef04.js"></script>
+        <script src="toc-dfbebf66.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -311,46 +311,36 @@ reaper_my_plugin = "./."
 <h2 id="commands"><a class="header" href="#commands">COMMANDS</a></h2>
 <p>Each command is documented in its own section:</p>
 <p><a href="#cargo-reaper-new"><code>cargo-reaper new</code></a> </p>
-  
 <dd>Scaffold a new plugin project.</dd>
 
 <p><a href="#cargo-reaper-list"><code>cargo-reaper list</code></a> </p>
-  
 <dd>Print plugin information to <code>stdout</code>.</dd>
 
 <p><a href="#cargo-reaper-build"><code>cargo-reaper build</code></a> </p>
-  
 <dd>Compile REAPER plugin(s).</dd>
 
 <p><a href="#cargo-reaper-link"><code>cargo-reaper link</code></a> </p>
-  
 <dd>Manually symlink plugin(s) to REAPER's <code>UserPlugins</code> directory.</dd>
 
 <p><a href="#cargo-reaper-run"><code>cargo-reaper run</code></a> </p>
-  
 <dd>Compile plugin(s) and launch REAPER.</dd>
 
 <p><a href="#cargo-reaper-clean"><code>cargo-reaper clean</code></a> </p>
-  
 <dd>Remove generated symlinks and artifacts.</dd>
 
 <p><a href="#cargo-reaper-completions"><code>cargo-reaper completions</code></a> </p>
-  
 <dd>Generate shell completions.</dd>
 
 <p><code>help</code> </p>
-  
 <dd>Print help or the help of the given subcommand(s).</dd>
 
 <h2 id="options"><a class="header" href="#options">OPTIONS</a></h2>
 <p><code>-h</code> 
 <code>--help</code> </p>
-  
 <dd>Print help (see more with <code>--help</code>).</dd>
 
 <p><code>-V</code> 
 <code>--version</code> </p>
-  
 <dd>Print version information.</dd>
 
 <div style="break-before: page; page-break-before: always;"></div>
@@ -365,12 +355,10 @@ This includes a simple template with a <code>Cargo.toml</code> manifest, sample 
 <h2 id="options-1"><a class="header" href="#options-1">OPTIONS</a></h2>
 <p><code>-t</code> 
 <code>--template</code> </p>
-  
 <dd>The type of template to use.</dd>
 
 <p><code>-h</code> 
 <code>--help</code> </p>
-  
 <dd>Print help information.</dd>
 
 <h2 id="examples"><a class="header" href="#examples">EXAMPLES</a></h2>
@@ -389,9 +377,9 @@ however, <code>cargo-reaper</code> will throw an error and refuse to compile if 
 </ol>
 <pre><code class="language-sh">cargo reaper new --template vst reaper_my_plugin
 </code></pre>
-<blockquote>
-<p>[!WARNING]
-Currently the <code>reaper-rs</code> library supports using the <code>vst</code> crate which is deprecated. In an effort to maintain support for <code>reaper-rs</code>,
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>Currently the <code>reaper-rs</code> library supports using the <code>vst</code> crate which is deprecated. In an effort to maintain support for <code>reaper-rs</code>,
 <code>cargo-reaper</code> can initialize VST plugins, but it does not add any conveniences like it does for extension development.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -406,7 +394,6 @@ in a human-readable format to the terminal via <code>stdout</code>.</p>
 <h2 id="options-2"><a class="header" href="#options-2">OPTIONS</a></h2>
 <p><code>-h</code> 
 <code>--help</code> </p>
-  
 <dd>Print help information.</dd>
 
 <h2 id="examples-1"><a class="header" href="#examples-1">EXAMPLES</a></h2>
@@ -426,12 +413,10 @@ that is built with the <code>release</code> profile, does not fail to be symlink
 <p>If for whatever reason symlinking fails, and the build command is unable to remove a stale symlink, use <a href="#cargo-reaper-clean"><code>cargo-reaper-clean</code></a>.</p>
 <h2 id="options-3"><a class="header" href="#options-3">OPTIONS</a></h2>
 <p><code>--no-symlink</code> </p>
-  
 <dd>Prevent symlinking extension plugin(s) to the <code>UserPlugins</code> directory.</dd>
 
 <p><code>-h</code> 
 <code>--help</code> </p>
-  
 <dd>Print help information.</dd>
 
 <h2 id="examples-2"><a class="header" href="#examples-2">EXAMPLES</a></h2>
@@ -470,7 +455,6 @@ and symlinking the plugin, for instance, in CI or when using build tools like Ni
 <h2 id="options-4"><a class="header" href="#options-4">OPTIONS</a></h2>
 <p><code>-h</code> 
 <code>--help</code> </p>
-  
 <dd>Print help information.</dd>
 
 <h2 id="examples-3"><a class="header" href="#examples-3">EXAMPLES</a></h2>
@@ -509,39 +493,31 @@ working, please see the options below for manually specifying a path to a REAPER
 <h2 id="options-5"><a class="header" href="#options-5">OPTIONS</a></h2>
 <p><code>-e</code> <em>path</em> 
 <code>--exec</code> <em>path</em> </p>
-  
 <dd>Override the REAPER executable file path.</dd>
 
 <p><code>-o</code> <em>path</em> 
 <code>--open</code> <em>path</em> 
 <code>--open-project</code> <em>path</em> </p>
-  
 <dd>Open a specific REAPER project file.</dd>
 
 <p><code>--no-build</code> </p>
-  
 <dd>Do not build plugin(s) before running REAPER.</dd>
 
 <p><code>-t</code> <em>duration</em> 
 <code>--timeout</code> <em>duration</em> </p>
-  
 <dd>The amount of time to wait before closing REAPER, in human-readable format (e.g. 10s, 2m, 1h).</dd>
 
 <p><code>--stdin</code> <em>stdio</em> </p>
-  
 <dd>Configuration for the child process’s standard input (stdin) handle.</dd>
 
 <p><code>--stdout</code> <em>stdio</em> </p>
-  
 <dd>Configuration for the child process’s standard output (stdout) handle.</dd>
 
 <p><code>--stderr</code> <em>stdio</em> </p>
-  
 <dd>Configuration for the child process’s standard error (stderr) handle.</dd>
 
 <p><code>-h</code> 
 <code>--help</code> </p>
-  
 <dd>Print help information.</dd>
 
 <h2 id="additional-linux-options"><a class="header" href="#additional-linux-options">ADDITIONAL LINUX OPTIONS</a></h2>
@@ -549,21 +525,17 @@ working, please see the options below for manually specifying a path to a REAPER
 These options are intended to enable testing in headless environments and to make it easier to
 assert the state an extension plugin reaches.</p>
 <p><code>--headless</code> </p>
-  
 <dd>Run REAPER in a headless environment.</dd>
 
 <p><code>-D</code> <em>display</em> 
 <code>--display</code> <em>display</em> </p>
-  
 <dd>The virtual display that should be used for the headless environment. Can also be passed with the <code>DISPLAY</code> environment variable, e.g. <code>DISPLAY=:99</code>.</dd>
 
 <p><code>-w</code> <em>title</em> 
 <code>--locate-window</code> <em>title</em> </p>
-  
 <dd>Locate a window based on its title and exit with status code 0 if found.</dd>
 
 <p><code>--keep-going</code> </p>
-  
 <dd>Continue until the specified timeout, even after a window is located.</dd>
 
 <h2 id="examples-4"><a class="header" href="#examples-4">EXAMPLES</a></h2>
@@ -609,22 +581,18 @@ to build the plugin prior to testing it.</p>
 <h2 id="options-6"><a class="header" href="#options-6">OPTIONS</a></h2>
 <p><code>-p</code> <em>key</em> 
 <code>--plugin</code> <em>key</em> </p>
-  
 <dd>Clean plugin(s) by key.</dd>
 
 <p><code>-n</code> 
 <code>--dry-run</code> </p>
-  
 <dd>Display what would be deleted without deleting anything.</dd>
 
 <p><code>-a</code> 
 <code>--remove-artifacts</code> </p>
-  
 <dd>Remove artifacts that cargo-reaper has generated in the past.</dd>
 
 <p><code>-h</code> 
 <code>--help</code> </p>
-  
 <dd>Print help information.</dd>
 
 <h2 id="examples-5"><a class="header" href="#examples-5">EXAMPLES</a></h2>
@@ -663,7 +631,6 @@ without removing them.</li>
 <h2 id="options-7"><a class="header" href="#options-7">OPTIONS</a></h2>
 <p><code>-h</code> 
 <code>--help</code> </p>
-  
 <dd>Print help information.</dd>
 
 <h2 id="examples-6"><a class="header" href="#examples-6">EXAMPLES</a></h2>
@@ -764,11 +731,11 @@ a <a href="https://doc.rust-lang.org/cargo/appendix/glossary.html#package">packa
 
         <script src="elasticlunr-ef4e11c1.min.js"></script>
         <script src="mark-09e88c2c.min.js"></script>
-        <script src="searcher-09f2665d.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
 
         <script src="clipboard-1626706a.min.js"></script>
         <script src="highlight-abc7f01d.js"></script>
-        <script src="book-609e4cb8.js"></script>
+        <script src="book-a0b12cfe.js"></script>
 
         <!-- Custom JS scripts -->
 
