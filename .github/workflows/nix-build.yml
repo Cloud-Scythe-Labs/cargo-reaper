@@ -19,8 +19,10 @@ jobs:
           extra_nix_config: |
             extra-substituters = https://cloud-scythe-labs.cachix.org
             extra-trusted-public-keys = cloud-scythe-labs.cachix.org-1:I+IM+x2gGlmNjUMZOsyHJpxIzmAi7XhZNmTVijGjsLw=
-            extra-experimental-features = auto-allocate-uids
+            extra-experimental-features = nix-command flakes auto-allocate-uids cgroups
             auto-allocate-uids = true
+            use-cgroups = true
+            extra-system-features = uid-range
       - name: Build cargo-reaper
         run: nix-build
       - name: Build checks
