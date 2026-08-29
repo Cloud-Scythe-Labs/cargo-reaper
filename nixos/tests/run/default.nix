@@ -13,7 +13,7 @@ in
 testers.runNixOSTest {
   name = "test-cargo-reaper-run";
   node.pkgs = lib.mkForce pkgsLinux;
-  nodes.corro = {
+  containers.corro = {
     imports = [ ../profile.nix ];
     environment.systemPackages = with pkgsLinux; [
       cargo
@@ -26,7 +26,7 @@ testers.runNixOSTest {
     corro.wait_for_unit("multi-user.target")
 
     # Launch REAPER once to initialize `~/.config/REAPER/UserPlugins`
-    corro.succeed("su - corro -c 'cargo-reaper run --no-build --headless --timeout 5s --stdout null --stderr null'", timeout=20)
+    corro.succeed("su - corro -c 'cargo-reaper run --no-build --headless --display :99 --timeout 5s --stdout null --stderr null'", timeout=20)
 
     corro.succeed("su - root -c 'cp -r ${plugin_source}/* /home/corro/'", timeout=15)
     # `${plugin_vendor}/.cargo/config.toml` points at a *relative*
@@ -36,7 +36,7 @@ testers.runNixOSTest {
     corro.succeed("su - root -c 'mkdir -p /home/corro/.cargo && cp /home/corro/cargo-vendor-dir/.cargo/config.toml /home/corro/.cargo/'", timeout=15)
 
     status, output = corro.execute(
-        "su - corro -c 'cargo-reaper run --headless --keep-going "
+        "su - corro -c 'cargo-reaper run --headless --display :99 --keep-going "
         "--locate-window \"${plugin_name} error\" "
         "--timeout 5s --stdout null --stderr null -- --release --offline'",
         timeout=180,
