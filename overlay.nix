@@ -104,8 +104,26 @@ in
       { package
       , plugin ? package
       , target ? null
+      , profile ? "release"
       , ...
       }@crateArgs:
+      let
+        args = lib.escapeShellArgs (
+          [
+            "--no-symlink"
+            "--package"
+            "${package}"
+            "--lib"
+          ]
+          ++ lib.optionals (profile != "debug") (
+            if profile == "release" then
+              [ "--release" ]
+            else
+              [ "--profile" profile ]
+          )
+          ++ lib.optionals (target != null) [ "--target" target ]
+        );
+      in
       rfinal.buildRustPackage (crateArgs // {
         pname = package;
         version = crateArgs.version or "0.0.0";
@@ -119,18 +137,14 @@ in
         # the `$HOME` directory which is inaccessible to the sandbox.
         buildPhase = ''
           runHook preBuild
-          cargo reaper build --no-symlink \
-            -p ${package} --lib \
-            --release ${lib.optionalString (target != null) ''\
-            --target ${target}
-          ''}
+          cargo reaper build ${args}
           runHook postBuild
         '';
         # Include extension plugin in the build result.
         installPhase = ''
           runHook preInstall
           mkdir -p $out/lib
-          mv target${lib.optionalString (target != null) "/${target}"}/release/${plugin}.* $out/lib
+          mv target${lib.optionalString (target != null) "/${target}"}/${profile}/${plugin}.* $out/lib
           runHook postInstall
         '';
         nativeBuildInputs = (crateArgs.nativeBuildInputs or [ ]) ++ [
