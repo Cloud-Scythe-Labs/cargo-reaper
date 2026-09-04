@@ -30,16 +30,16 @@ jobs:
           restore-keys: |
             cargo-deps-${{ runner.os }}-
       - name: Install cargo reaper plugin
-        run: cargo install --path .
+        run: cargo install --path . --locked
       - name: Build Package Manifest
         run: |
           cd nix/tests/plugin_manifests/package_manifest
-          cargo reaper build --no-symlink --target x86_64-pc-windows-msvc
+          cargo reaper build --no-symlink --target x86_64-pc-windows-msvc --locked
       - name: Build Workspace Manifest
         run: |
           cd nix/tests/plugin_manifests/workspace_manifest
-          cargo reaper build --no-symlink --target x86_64-pc-windows-msvc
+          cargo reaper build --no-symlink --target x86_64-pc-windows-msvc --locked
       - name: Build Workspace Package Manifest
         run: |
           cd nix/tests/plugin_manifests/workspace_package_manifest
-          cargo reaper build --no-symlink --target x86_64-pc-windows-msvc
+          cargo reaper build --no-symlink --target x86_64-pc-windows-msvc --locked
